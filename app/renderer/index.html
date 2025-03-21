@@ -1,0 +1,71 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Desktop</title>
+</head>
+<body>
+    <h1>Remote Desktop</h1>
+    <video id="screen-share" autoplay></video>
+    <script src="renderer.js"></script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Desktop</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        #host-section, #client-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        
+        #session-id {
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        #screen-share {
+            max-width: 100%;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Remote Desktop</h1>
+    
+    <div id="host-section">
+        <button id="start-session">Start Remote Access</button>
+        <p>Session ID: <span id="session-id"></span></p>
+    </div>
+
+    <div id="client-section">
+        <input type="text" id="join-session-id" placeholder="Enter Session ID">
+        <button id="join-session">Connect</button>
+    </div>
+
+    <video id="screen-share" autoplay></video>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
+
