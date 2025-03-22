@@ -1,25 +1,8 @@
-// const { app, BrowserWindow, desktopCapturer, ipcMain } = require('electron');
-// const path = require('path');
-
-// let mainWindow;
-
-// app.whenReady().then(() => {
-//     mainWindow = new BrowserWindow({
-//         width: 800,
-//         height: 600,
-//         webPreferences: {
-//             preload: path.join(__dirname, 'preload.js'),
-//             nodeIntegration: false,
-//             contextIsolation: true,
-//         },
-//     });
-
-//     mainWindow.loadFile('renderer/index.html');
-// });
-
-
-const { app, BrowserWindow, desktopCapturer, ipcMain } = require('electron');
+const { app, BrowserWindow, desktopCapturer, ipcMain, clipboard } = require('electron');
 const path = require('path');
+const fs = require('fs').promises;
+const { exec } = require('child_process');
+const robot = require('robotjs');
 
 let mainWindow;
 
@@ -72,6 +55,91 @@ function createWindow() {
         } else {
             callback(false);
         }
+    });
+
+    // File operations
+    ipcMain.handle('CREATE_FILE', async (event, { path, content }) => {
+        try {
+            await fs.writeFile(path, content);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('READ_FILE', async (event, path) => {
+        try {
+            const content = await fs.readFile(path, 'utf8');
+            return { success: true, content };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('LIST_FILES', async (event, dirPath) => {
+        try {
+            const files = await fs.readdir(dirPath);
+            return { success: true, files };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    // System commands
+    ipcMain.handle('EXECUTE_COMMAND', async (event, command) => {
+        return new Promise((resolve) => {
+            exec(command, (error, stdout, stderr) => {
+                resolve({ success: !error, output: stdout, error: stderr });
+            });
+        });
+    });
+
+    // Mouse control with better precision
+    ipcMain.handle('MOUSE_MOVE', async (event, { x, y }) => {
+        try {
+            robot.moveMouse(x, y);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('MOUSE_CLICK', async (event, { button = 'left', double = false }) => {
+        try {
+            robot.mouseClick(button, double);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    // Keyboard control
+    ipcMain.handle('KEY_PRESS', async (event, key) => {
+        try {
+            robot.keyTap(key);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('KEY_COMBO', async (event, keys) => {
+        try {
+            robot.keyTap(keys[0], keys.slice(1));
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    });
+
+    // Clipboard operations
+    ipcMain.handle('READ_CLIPBOARD', () => {
+        return clipboard.readText();
+    });
+
+    ipcMain.handle('WRITE_CLIPBOARD', (event, text) => {
+        clipboard.writeText(text);
+        return { success: true };
     });
 
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));

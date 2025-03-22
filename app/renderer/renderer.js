@@ -302,3 +302,76 @@ document.addEventListener("keydown", (event) => {
     const sessionID = document.getElementById("session-id").innerText;
     socket.emit("key-press", { sessionID, key: event.key });
 });
+
+// Add these functions to handle remote control
+
+async function handleRemoteControl(event, sessionID) {
+    try {
+        // Mouse movement
+        const rect = event.target.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Calculate relative position
+        const scaleX = screen.width / rect.width;
+        const scaleY = screen.height / rect.height;
+        
+        const absoluteX = Math.round(x * scaleX);
+        const absoluteY = Math.round(y * scaleY);
+        
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'mouse-move',
+            data: { x: absoluteX, y: absoluteY }
+        });
+    } catch (error) {
+        console.error('Error in remote control:', error);
+    }
+}
+
+// Add event listeners for remote control
+document.getElementById('screen-share').addEventListener('mousemove', (event) => {
+    const sessionID = document.getElementById('join-session-id').value;
+    handleRemoteControl(event, sessionID);
+});
+
+document.getElementById('screen-share').addEventListener('click', async (event) => {
+    const sessionID = document.getElementById('join-session-id').value;
+    socket.emit('remote-control', {
+        sessionID,
+        type: 'mouse-click',
+        data: { button: 'left' }
+    });
+});
+
+document.addEventListener('keydown', (event) => {
+    const sessionID = document.getElementById('join-session-id').value;
+    socket.emit('remote-control', {
+        sessionID,
+        type: 'key-press',
+        data: { key: event.key }
+    });
+});
+
+// Handle incoming remote control commands
+socket.on('remote-control', async (data) => {
+    try {
+        switch (data.type) {
+            case 'mouse-move':
+                await window.electron.sendMouseMove(data.data.x, data.data.y);
+                break;
+            case 'mouse-click':
+                await window.electron.sendMouseClick(data.data.button);
+                break;
+            case 'key-press':
+                await window.electron.sendKeyPress(data.data.key);
+                break;
+            case 'execute-command':
+                await window.electron.executeCommand(data.data.command);
+                break;
+            // Add more cases as needed
+        }
+    } catch (error) {
+        console.error('Error executing remote control command:', error);
+    }
+});

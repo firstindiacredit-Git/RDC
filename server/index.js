@@ -197,6 +197,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('remote-control', (data) => {
+        const targetSession = sessions[data.sessionID];
+        if (targetSession) {
+            // Forward the command to the host
+            io.to(targetSession.host).emit('remote-control', data);
+        }
+    });
+
     socket.on('disconnect', () => {
         Object.keys(sessions).forEach((sessionID) => {
             if (sessions[sessionID].host === socket.id || sessions[sessionID].client === socket.id) {
