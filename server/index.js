@@ -169,6 +169,34 @@ io.on('connection', (socket) => {
         io.to(sessions[data.sessionID].host).emit('key-press', data.key);
     });
 
+    socket.on('offer', (data) => {
+        // Send offer only to the client in the specific session
+        const targetSession = sessions[data.sessionID];
+        if (targetSession && targetSession.client) {
+            io.to(targetSession.client).emit('offer', data);
+        }
+    });
+
+    socket.on('answer', (data) => {
+        // Send answer only to the host in the specific session
+        const targetSession = sessions[data.sessionID];
+        if (targetSession && targetSession.host) {
+            io.to(targetSession.host).emit('answer', data);
+        }
+    });
+
+    socket.on('candidate', (data) => {
+        // Send ICE candidate to the other peer in the session
+        const targetSession = sessions[data.sessionID];
+        if (targetSession) {
+            const targetId = socket.id === targetSession.host ? 
+                targetSession.client : targetSession.host;
+            if (targetId) {
+                io.to(targetId).emit('candidate', data);
+            }
+        }
+    });
+
     socket.on('disconnect', () => {
         Object.keys(sessions).forEach((sessionID) => {
             if (sessions[sessionID].host === socket.id || sessions[sessionID].client === socket.id) {
