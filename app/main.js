@@ -33,8 +33,21 @@ function createWindow() {
             nodeIntegration: false,
             webSecurity: true,
             allowRunningInsecureContent: false,
-            enableWebRTC: true
         },
+    });
+
+    // Add screen capture handler
+    ipcMain.handle('GET_SCREEN_SOURCES', async () => {
+        try {
+            const sources = await desktopCapturer.getSources({
+                types: ['screen', 'window'],
+                thumbnailSize: { width: 1920, height: 1080 }
+            });
+            return sources;
+        } catch (error) {
+            console.error('Error getting sources:', error);
+            throw error;
+        }
     });
 
     // Add this to verify preload script loading

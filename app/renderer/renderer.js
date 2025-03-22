@@ -92,8 +92,21 @@ socket.on("session-joined", (sessionID) => {
     alert(`Connected to session: ${sessionID}`);
 });
 
-socket.on("client-connected", (sessionID) => {
-    startScreenShare(sessionID);
+socket.on("client-connected", async (sessionID) => {
+    try {
+        const button = document.getElementById("start-session");
+        button.disabled = true;
+        button.textContent = "Starting screen share...";
+        
+        await startScreenShare(sessionID);
+        
+        button.textContent = "Screen sharing active";
+    } catch (error) {
+        console.error('Failed to start screen sharing:', error);
+        button.disabled = false;
+        button.textContent = "Start Remote Access";
+        alert(`Failed to start screen sharing: ${error.message}`);
+    }
 });
 
 // Add this at the start of your file to verify the electron API is available
@@ -103,25 +116,23 @@ async function startScreenShare(sessionID) {
     try {
         console.log('Starting screen share...');
         
-        // Verify electron API is available
-        if (!window.electron) {
-            throw new Error('Electron API not available');
+        if (!window.electron?.getScreenSources) {
+            throw new Error('Screen capture API not available');
         }
 
-        if (!window.electron.getSources) {
-            throw new Error('getSources method not available');
-        }
-
-        const sources = await window.electron.getSources();
+        // Get screen sources from main process
+        const sources = await window.electron.getScreenSources();
         console.log('Available sources:', sources);
 
         if (!sources || sources.length === 0) {
             throw new Error('No screen sources found');
         }
 
-        const source = sources[0]; // Get the first source
+        // Get the first source
+        const source = sources[0];
         console.log('Selected source:', source.id);
 
+        // Request media stream
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: false,
             video: {
@@ -136,35 +147,49 @@ async function startScreenShare(sessionID) {
             }
         });
 
+        // Display the stream
         const videoElement = document.getElementById('screen-share');
         if (videoElement) {
             videoElement.srcObject = stream;
+            videoElement.play().catch(console.error);
             console.log('Stream attached to video element');
         }
 
-        const peer = new RTCPeerConnection();
-        stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        // Set up WebRTC
+        const peerConnection = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        });
 
-        peer.onicecandidate = (event) => {
+        // Add tracks to the peer connection
+        stream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, stream);
+        });
+
+        // Handle ICE candidates
+        peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit('candidate', { sessionID, candidate: event.candidate });
             }
         };
 
-        socket.on('offer', async (offer) => {
-            await peer.setRemoteDescription(offer);
-            const answer = await peer.createAnswer();
-            await peer.setLocalDescription(answer);
-            socket.emit('answer', { sessionID, answer });
+        // Create and send offer
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('offer', { sessionID, offer });
+
+        // Handle incoming WebRTC signals
+        socket.on('answer', async (answer) => {
+            await peerConnection.setRemoteDescription(answer);
         });
 
         socket.on('candidate', async (data) => {
-            await peer.addIceCandidate(data.candidate);
+            if (data.candidate) {
+                await peerConnection.addIceCandidate(data.candidate);
+            }
         });
 
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        socket.emit('offer', { sessionID, offer });
     } catch (error) {
         console.error('Error in startScreenShare:', error);
         alert(`Failed to start screen sharing: ${error.message}`);
