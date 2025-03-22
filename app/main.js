@@ -30,9 +30,21 @@ function createWindow() {
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
-            enableRemoteModule: false,
             nodeIntegration: false,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            enableWebRTC: true
         },
+    });
+
+    // Add this to verify preload script loading
+    mainWindow.webContents.on('did-finish-load', () => {
+        console.log('Window loaded');
+    });
+
+    // Add this to catch preload script errors
+    mainWindow.webContents.on('preload-error', (event, preloadPath, error) => {
+        console.error('Preload error:', error);
     });
 
     // Add error handler
@@ -40,9 +52,13 @@ function createWindow() {
         console.error('Failed to load:', errorCode, errorDescription);
     });
 
-    // Add permission handler
+    // Add screen capture permissions
     mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-        callback(true);
+        if (permission === 'media') {
+            callback(true);
+        } else {
+            callback(false);
+        }
     });
 
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));

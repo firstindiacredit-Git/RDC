@@ -1,32 +1,37 @@
 const { contextBridge, ipcRenderer, desktopCapturer } = require('electron');
 
-contextBridge.exposeInMainWorld('electron', {
-    getSources: async () => {
-        try {
-            if (!desktopCapturer) {
-                throw new Error('desktopCapturer is not available');
-            }
-            return await desktopCapturer.getSources({ types: ['screen'] });
-        } catch (error) {
-            console.error('Error getting sources:', error);
-            return [];
-        }
-    },
-    send: (channel, data) => {
-        try {
+// Add this debug log at the start
+console.log('Preload script starting...');
+
+// Verify desktopCapturer is available
+if (!desktopCapturer) {
+    console.error('desktopCapturer is not available in preload');
+}
+
+contextBridge.exposeInMainWorld(
+    'electron',
+    {
+        getSources: () => {
+            console.log('getSources called from preload');
+            return desktopCapturer.getSources({
+                types: ['screen', 'window'],
+                thumbnailSize: { width: 1920, height: 1080 }
+            }).catch(error => {
+                console.error('Error in getSources:', error);
+                throw error;
+            });
+        },
+        send: (channel, data) => {
             ipcRenderer.send(channel, data);
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    },
-    receive: (channel, callback) => {
-        try {
-            ipcRenderer.on(channel, (event, ...args) => callback(...args));
-        } catch (error) {
-            console.error('Error setting up receiver:', error);
+        },
+        receive: (channel, func) => {
+            ipcRenderer.on(channel, (event, ...args) => func(...args));
         }
     }
-});
+);
+
+// Add this to verify the API is exposed
+console.log('Preload script completed. electron API should be available.');
 
 // Add a check to ensure the preload script is running
 console.log('Preload script loaded successfully');

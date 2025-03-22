@@ -66,6 +66,15 @@
     <video id="screen-share" autoplay></video>
 
     <script src="renderer.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, checking electron API:', !!window.electron);
+            if (!window.electron) {
+                console.error('Electron API not available in renderer');
+            }
+        });
+    </script>
 </body>
 </html>
 
