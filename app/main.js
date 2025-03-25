@@ -2,7 +2,7 @@ const { app, BrowserWindow, desktopCapturer, ipcMain, clipboard } = require('ele
 const path = require('path');
 const fs = require('fs').promises;
 const { exec } = require('child_process');
-const robot = require('robotjs');
+const { mouse, keyboard, Key } = require('@nut-tree/nut-js');
 
 let mainWindow;
 
@@ -94,10 +94,10 @@ function createWindow() {
         });
     });
 
-    // Mouse control with better precision
+    // Mouse control with better precision using @nut-tree/nut-js
     ipcMain.handle('MOUSE_MOVE', async (event, { x, y }) => {
         try {
-            robot.moveMouse(x, y);
+            await mouse.move({ x, y });
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
@@ -106,7 +106,11 @@ function createWindow() {
 
     ipcMain.handle('MOUSE_CLICK', async (event, { button = 'left', double = false }) => {
         try {
-            robot.mouseClick(button, double);
+            if (double) {
+                await mouse.doubleClick();
+            } else {
+                await mouse.click(button);
+            }
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
@@ -116,7 +120,8 @@ function createWindow() {
     // Keyboard control
     ipcMain.handle('KEY_PRESS', async (event, key) => {
         try {
-            robot.keyTap(key);
+            await keyboard.pressKey(Key[key.toUpperCase()]);
+            await keyboard.releaseKey(Key[key.toUpperCase()]);
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
@@ -125,7 +130,7 @@ function createWindow() {
 
     ipcMain.handle('KEY_COMBO', async (event, keys) => {
         try {
-            robot.keyTap(keys[0], keys.slice(1));
+            keyboard.keyTap(keys[0], keys.slice(1));
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };

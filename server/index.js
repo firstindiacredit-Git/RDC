@@ -68,23 +68,27 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const robot = require('robotjs');
 const { v4: uuidv4 } = require('uuid');
+const { app: electronApp, BrowserWindow, desktopCapturer, ipcMain, clipboard } = require('electron');
+const path = require('path');
+const fs = require('fs').promises;
+const { exec } = require('child_process');
+const { mouse, keyboard, Key } = require('@nut-tree/nut-js');
 
-const app = express();
+const expressApp = express();
 
 // Add Express routes first
-app.get('/', (req, res) => {
+expressApp.get('/', (req, res) => {
     res.send('Server is running');
 });
 
 // Add this near your other routes
-app.get('/test', (req, res) => {
+expressApp.get('/test', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
 });
 
 // Enable CORS for Express
-app.use((req, res, next) => {
+expressApp.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -96,7 +100,7 @@ app.use((req, res, next) => {
     next();
 });
 
-const server = http.createServer(app);
+const server = http.createServer(expressApp);
 
 // Socket.IO setup with updated configuration
 const io = new Server(server, {
