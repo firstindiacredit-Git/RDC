@@ -1,4 +1,4 @@
-const socket = io('http://192.168.29.83:3000', {
+const socket = io('http://192.168.29.140:3000', {
     reconnectionAttempts: 5,
     timeout: 20000,
     transports: ['polling', 'websocket'],
@@ -344,6 +344,17 @@ document.getElementById('screen-share').addEventListener('click', async (event) 
     });
 });
 
+// राइट क्लिक के लिए इवेंट लिसनर जोड़ें
+document.getElementById('screen-share').addEventListener('contextmenu', async (event) => {
+    event.preventDefault(); // ब्राउज़र का डिफॉल्ट कांटेक्स्ट मेनू नहीं दिखाने के लिए
+    const sessionID = document.getElementById('join-session-id').value;
+    socket.emit('remote-control', {
+        sessionID,
+        type: 'mouse-click',
+        data: { button: 'right' }
+    });
+});
+
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     socket.emit('remote-control', {
@@ -353,7 +364,27 @@ document.addEventListener('keydown', (event) => {
     });
 });
 
-// Handle incoming remote control commands
+// Add wheel event listener for scroll functionality
+document.getElementById('screen-share').addEventListener('wheel', async (event) => {
+    event.preventDefault(); 
+    const sessionID = document.getElementById('join-session-id').value;
+    
+    
+    const direction = event.deltaY > 0 ? 'down' : 'up';
+    
+    const amount = Math.abs(Math.round(event.deltaY / 100));
+    
+    socket.emit('remote-control', {
+        sessionID,
+        type: 'mouse-scroll',
+        data: { 
+            amount: amount || 1, 
+            direction: direction 
+        }
+    });
+});
+
+// Update remote-control handler
 socket.on('remote-control', async (data) => {
     try {
         switch (data.type) {
@@ -361,7 +392,12 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendMouseMove(data.data.x, data.data.y);
                 break;
             case 'mouse-click':
-                await window.electron.sendMouseClick(data.data.button);
+                console.log('Mouse click:', data.data.button);
+                await window.electron.sendMouseClick(data.data.button || 'left', false);
+                break;
+            case 'mouse-scroll':
+                console.log('Mouse scroll:', data.data.direction, data.data.amount);
+                await window.electron.sendMouseScroll(data.data.amount || 1, data.data.direction);
                 break;
             case 'key-press':
                 await window.electron.sendKeyPress(data.data.key);
@@ -373,5 +409,11 @@ socket.on('remote-control', async (data) => {
         }
     } catch (error) {
         console.error('Error executing remote control command:', error);
+        console.error('Error details:', error.message);
     }
 });
+
+
+
+
+

@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electron', {
     writeClipboard: (text) => ipcRenderer.invoke('WRITE_CLIPBOARD', text),
     sendMouseClick: (button, double) => ipcRenderer.invoke('MOUSE_CLICK', { button, double }),
     sendMouseMove: (x, y) => ipcRenderer.invoke('MOUSE_MOVE', { x, y }),
+    sendMouseScroll: (amount, direction) => ipcRenderer.invoke('MOUSE_SCROLL', { amount, direction }),
     sendKeyPress: (key) => ipcRenderer.invoke('KEY_PRESS', key),
     sendKeyCombo: (keys) => ipcRenderer.invoke('KEY_COMBO', keys),
     minimizeWindow: () => ipcRenderer.invoke('MINIMIZE_WINDOW'),

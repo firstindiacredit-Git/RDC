@@ -104,15 +104,38 @@ function createWindow() {
         }
     });
 
-    ipcMain.handle('MOUSE_CLICK', async (event, { button = 'left', double = false }) => {
+    // Add mouse scroll handler
+    ipcMain.handle('MOUSE_SCROLL', async (event, { amount, direction }) => {
         try {
-            if (double) {
-                await mouse.doubleClick();
+            console.log(`Mouse scroll: amount=${amount}, direction=${direction}`);
+            // Direction: 'up' or 'down'
+            if (direction === 'down') {
+                await mouse.scrollDown(amount);
             } else {
-                await mouse.click(button);
+                await mouse.scrollUp(amount);
             }
             return { success: true };
         } catch (error) {
+            console.error('Mouse scroll error:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    ipcMain.handle('MOUSE_CLICK', async (event, { button = 'left', double = false }) => {
+        try {
+            console.log(`Mouse click: ${button}, double: ${double}`);
+            if (double) {
+                await mouse.doubleClick(button === 'left' ? 0 : 1);
+            } else {
+                if (button === 'left') {
+                    await mouse.leftClick();
+                } else if (button === 'right') {
+                    await mouse.rightClick();
+                }
+            }
+            return { success: true };
+        } catch (error) {
+            console.error('Mouse click error:', error);
             return { success: false, error: error.message };
         }
     });
