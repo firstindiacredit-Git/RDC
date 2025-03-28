@@ -148,22 +148,124 @@ function createWindow() {
         }
     });
 
-    // Keyboard control
-    ipcMain.handle('KEY_PRESS', async (event, key) => {
+    // Special key mapping
+    const specialKeyMap = {
+        'Shift': Key.SHIFT,
+        'Control': Key.CONTROL,
+        'Alt': Key.ALT,
+        'Meta': Key.META, // Windows key
+        'Tab': Key.TAB,
+        'Enter': Key.ENTER,
+        'Backspace': Key.BACKSPACE,
+        ' ': Key.SPACE,
+        'Delete': Key.DELETE,
+        'Escape': Key.ESCAPE,
+        'ArrowUp': Key.UP,
+        'ArrowDown': Key.DOWN,
+        'ArrowLeft': Key.LEFT,
+        'ArrowRight': Key.RIGHT,
+        'Home': Key.HOME,
+        'End': Key.END,
+        'PageUp': Key.PAGE_UP,
+        'PageDown': Key.PAGE_DOWN,
+        'CapsLock': Key.CAPS_LOCK,
+        'Insert': Key.INSERT,
+        'F1': Key.F1,
+        'F2': Key.F2,
+        'F3': Key.F3,
+        'F4': Key.F4,
+        'F5': Key.F5,
+        'F6': Key.F6,
+        'F7': Key.F7,
+        'F8': Key.F8,
+        'F9': Key.F9,
+        'F10': Key.F10,
+        'F11': Key.F11,
+        'F12': Key.F12
+    };
+
+    // Improved key press handler
+    ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
         try {
-            await keyboard.pressKey(Key[key.toUpperCase()]);
-            await keyboard.releaseKey(Key[key.toUpperCase()]);
+            console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
+            
+            if (isSpecial) {
+                // Handle special keys
+                if (specialKeyMap[key]) {
+                    await keyboard.pressKey(specialKeyMap[key]);
+                    // Don't release special keys immediately - they'll be released on keyup
+                } else {
+                    console.warn(`Unmapped special key: ${key}`);
+                }
+            } else if (key.length === 1) {
+                // Regular character keys
+                await keyboard.type(key);
+            } else {
+                console.warn(`Unhandled key: ${key}`);
+            }
+            
             return { success: true };
         } catch (error) {
+            console.error('Key press error:', error);
             return { success: false, error: error.message };
         }
     });
 
-    ipcMain.handle('KEY_COMBO', async (event, keys) => {
+    // Key release handler
+    ipcMain.handle('KEY_RELEASE', async (event, { key }) => {
         try {
-            keyboard.keyTap(keys[0], keys.slice(1));
+            console.log(`Key release: ${key}`);
+            
+            // Only handle special keys for release
+            if (specialKeyMap[key]) {
+                await keyboard.releaseKey(specialKeyMap[key]);
+            }
+            
             return { success: true };
         } catch (error) {
+            console.error('Key release error:', error);
+            return { success: false, error: error.message };
+        }
+    });
+
+    // Key combo handler (for keyboard shortcuts)
+    ipcMain.handle('KEY_COMBO', async (event, { keys }) => {
+        try {
+            console.log(`Key combo: ${keys.join('+')}`);
+            
+            // Map all keys in the combo
+            const keyObjects = keys.map(key => specialKeyMap[key] || key);
+            
+            // Validate that we have valid keys
+            if (keyObjects.some(k => k === undefined)) {
+                console.warn('Some keys in the combo could not be mapped:', keys);
+                return { success: false, error: 'Invalid key in combo' };
+            }
+            
+            // Press all keys in sequence
+            for (const key of keyObjects) {
+                if (typeof key === 'string' && key.length === 1) {
+                    // For character keys
+                    await keyboard.pressKey(key);
+                } else {
+                    // For special keys
+                    await keyboard.pressKey(key);
+                }
+            }
+            
+            // Release all keys in reverse order
+            for (let i = keyObjects.length - 1; i >= 0; i--) {
+                const key = keyObjects[i];
+                if (typeof key === 'string' && key.length === 1) {
+                    await keyboard.releaseKey(key);
+                } else {
+                    await keyboard.releaseKey(key);
+                }
+            }
+            
+            return { success: true };
+        } catch (error) {
+            console.error('Key combo error:', error);
             return { success: false, error: error.message };
         }
     });
