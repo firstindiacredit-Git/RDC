@@ -364,23 +364,16 @@ document.addEventListener('keydown', (event) => {
     });
 });
 
-// Add wheel event listener for scroll functionality
+// Improved wheel event listener
 document.getElementById('screen-share').addEventListener('wheel', async (event) => {
-    event.preventDefault(); 
+    event.preventDefault(); // Prevent default browser scrolling
     const sessionID = document.getElementById('join-session-id').value;
     
-    
-    const direction = event.deltaY > 0 ? 'down' : 'up';
-    
-    const amount = Math.abs(Math.round(event.deltaY / 100));
-    
+    // Send raw deltaY to give more natural scrolling feel
     socket.emit('remote-control', {
         sessionID,
         type: 'mouse-scroll',
-        data: { 
-            amount: amount || 1, 
-            direction: direction 
-        }
+        data: { deltaY: event.deltaY }
     });
 });
 
@@ -396,8 +389,8 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendMouseClick(data.data.button || 'left', false);
                 break;
             case 'mouse-scroll':
-                console.log('Mouse scroll:', data.data.direction, data.data.amount);
-                await window.electron.sendMouseScroll(data.data.amount || 1, data.data.direction);
+                console.log('Mouse scroll: deltaY =', data.data.deltaY);
+                await window.electron.sendMouseScroll(data.data.deltaY);
                 break;
             case 'key-press':
                 await window.electron.sendKeyPress(data.data.key);

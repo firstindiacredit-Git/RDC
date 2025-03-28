@@ -104,16 +104,23 @@ function createWindow() {
         }
     });
 
-    // Add mouse scroll handler
-    ipcMain.handle('MOUSE_SCROLL', async (event, { amount, direction }) => {
+    // Improved mouse scroll handler
+    ipcMain.handle('MOUSE_SCROLL', async (event, { deltaY }) => {
         try {
-            console.log(`Mouse scroll: amount=${amount}, direction=${direction}`);
-            // Direction: 'up' or 'down'
-            if (direction === 'down') {
-                await mouse.scrollDown(amount);
+            console.log(`Mouse scroll: deltaY=${deltaY}`);
+            
+            const scrollAmount = Math.min(Math.abs(Math.ceil(deltaY / 30)), 5);
+            
+            if (deltaY > 0) {
+                for (let i = 0; i < scrollAmount; i++) {
+                    await mouse.scrollDown(1);
+                }
             } else {
-                await mouse.scrollUp(amount);
+                for (let i = 0; i < scrollAmount; i++) {
+                    await mouse.scrollUp(1);
+                }
             }
+            
             return { success: true };
         } catch (error) {
             console.error('Mouse scroll error:', error);
