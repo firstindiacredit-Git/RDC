@@ -104,21 +104,19 @@ function createWindow() {
         }
     });
 
-    // Improved mouse scroll handler
+    // Very fast scrolling implementation
     ipcMain.handle('MOUSE_SCROLL', async (event, { deltaY }) => {
         try {
             console.log(`Mouse scroll: deltaY=${deltaY}`);
             
-            const scrollAmount = Math.min(Math.abs(Math.ceil(deltaY / 30)), 5);
+            // Much more aggressive scrolling
+            // Using a very small divisor and higher maximum
+            const scrollAmount = Math.min(Math.abs(Math.ceil(deltaY / 5)), 20);
             
             if (deltaY > 0) {
-                for (let i = 0; i < scrollAmount; i++) {
-                    await mouse.scrollDown(1);
-                }
+                await mouse.scrollDown(scrollAmount);
             } else {
-                for (let i = 0; i < scrollAmount; i++) {
-                    await mouse.scrollUp(1);
-                }
+                await mouse.scrollUp(scrollAmount);
             }
             
             return { success: true };
