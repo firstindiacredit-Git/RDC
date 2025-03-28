@@ -305,19 +305,36 @@ document.addEventListener("keydown", (event) => {
 
 // Add these functions to handle remote control
 
+// Improved mouse movement handling
 async function handleRemoteControl(event, sessionID) {
     try {
-        // Mouse movement
-        const rect = event.target.getBoundingClientRect();
+        // Get the video element and its dimensions
+        const videoElement = document.getElementById('screen-share');
+        const rect = videoElement.getBoundingClientRect();
+        
+        // Calculate position within the video element
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         
-        // Calculate relative position
-        const scaleX = screen.width / rect.width;
-        const scaleY = screen.height / rect.height;
+        // Get the actual dimensions of the video content (might differ from element size)
+        const videoWidth = videoElement.videoWidth || rect.width;
+        const videoHeight = videoElement.videoHeight || rect.height;
         
-        const absoluteX = Math.round(x * scaleX);
-        const absoluteY = Math.round(y * scaleY);
+        // Calculate relative position (0-1)
+        const relativeX = x / rect.width;
+        const relativeY = y / rect.height;
+        
+        // Use fixed screen resolution for host (e.g., 1920x1080)
+        // If you know the actual resolution, use that instead
+        const targetWidth = 1920;  // Estimated target screen width
+        const targetHeight = 1080; // Estimated target screen height
+        
+        // Calculate absolute position on target screen
+        const absoluteX = Math.round(relativeX * targetWidth);
+        const absoluteY = Math.round(relativeY * targetHeight);
+        
+        // Add a small log for debugging
+        console.log(`Mouse coords: rel(${relativeX.toFixed(2)}, ${relativeY.toFixed(2)}) -> abs(${absoluteX}, ${absoluteY})`);
         
         socket.emit('remote-control', {
             sessionID,
@@ -329,10 +346,19 @@ async function handleRemoteControl(event, sessionID) {
     }
 }
 
-// Add event listeners for remote control
+// Make sure we have throttling to prevent too many mouse events
+let lastMouseMoveTime = 0;
+const MOUSE_MOVE_THROTTLE = 16; // ~60fps (1000ms / 60)
+
 document.getElementById('screen-share').addEventListener('mousemove', (event) => {
-    const sessionID = document.getElementById('join-session-id').value;
-    handleRemoteControl(event, sessionID);
+    const now = Date.now();
+    
+    // Throttle mouse move events to avoid overwhelming the connection
+    if (now - lastMouseMoveTime >= MOUSE_MOVE_THROTTLE) {
+        lastMouseMoveTime = now;
+        const sessionID = document.getElementById('join-session-id').value;
+        handleRemoteControl(event, sessionID);
+    }
 });
 
 document.getElementById('screen-share').addEventListener('click', async (event) => {

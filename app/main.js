@@ -97,9 +97,12 @@ function createWindow() {
     // Mouse control with better precision using @nut-tree/nut-js
     ipcMain.handle('MOUSE_MOVE', async (event, { x, y }) => {
         try {
-            await mouse.move({ x, y });
+            // Set the mouse position directly to absolute coordinates
+            console.log(`Setting mouse position to: ${x}, ${y}`);
+            await mouse.setPosition({ x, y });
             return { success: true };
         } catch (error) {
+            console.error('Mouse move error:', error);
             return { success: false, error: error.message };
         }
     });
