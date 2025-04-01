@@ -3,7 +3,6 @@ const path = require('path');
 const fs = require('fs').promises;
 const { exec } = require('child_process');
 const { mouse, keyboard, Key } = require('@nut-tree/nut-js');
-const socket = require('socket.io-client');
 
 let mainWindow;
 
@@ -184,43 +183,6 @@ function createWindow() {
         'F12': Key.F12,
         ' ': Key.SPACE
     };
-
-    // Update remote control handler
-    socket.on('remote-control', async (data) => {
-        try {
-            switch (data.type) {
-                case 'key-down':
-                    console.log('Key down:', data.data.key);
-                    if (data.data.key.length === 1) {
-                        // For regular characters
-                        await keyboard.type(data.data.key);
-                    } else if (specialKeyMap[data.data.key]) {
-                        // For special keys
-                        await keyboard.pressKey(specialKeyMap[data.data.key]);
-                    }
-                    break;
-                
-                case 'key-up':
-                    console.log('Key up:', data.data.key);
-                    if (specialKeyMap[data.data.key]) {
-                        await keyboard.releaseKey(specialKeyMap[data.data.key]);
-                    }
-                    break;
-            }
-        } catch (error) {
-            console.error('Error in remote control:', error);
-        }
-    });
-
-    // Clipboard operations
-    ipcMain.handle('READ_CLIPBOARD', () => {
-        return clipboard.readText();
-    });
-
-    ipcMain.handle('WRITE_CLIPBOARD', (event, text) => {
-        clipboard.writeText(text);
-        return { success: true };
-    });
 
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
     mainWindow.webContents.openDevTools();

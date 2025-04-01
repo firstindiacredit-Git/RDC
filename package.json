@@ -24,6 +24,7 @@
     "electron": "^35.0.3",
     "electron-rebuild": "^3.2.9",
     "node-gyp": "^9.4.1",
+    "socket.io-client": "^4.8.1",
     "wait-on": "^7.2.0"
   }
 }
