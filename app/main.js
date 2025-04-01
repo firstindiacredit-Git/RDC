@@ -150,14 +150,14 @@ function createWindow() {
 
     // Special key mapping
     const specialKeyMap = {
+        'Enter': Key.ENTER,
+        'Backspace': Key.BACKSPACE,
+        'Tab': Key.TAB,
         'Shift': Key.SHIFT,
         'Control': Key.CONTROL,
         'Alt': Key.ALT,
-        'Meta': Key.META, // Windows key
-        'Tab': Key.TAB,
-        'Enter': Key.ENTER,
-        'Backspace': Key.BACKSPACE,
-        ' ': Key.SPACE,
+        'Meta': Key.META,
+        'CapsLock': Key.CAPS_LOCK,
         'Delete': Key.DELETE,
         'Escape': Key.ESCAPE,
         'ArrowUp': Key.UP,
@@ -168,7 +168,6 @@ function createWindow() {
         'End': Key.END,
         'PageUp': Key.PAGE_UP,
         'PageDown': Key.PAGE_DOWN,
-        'CapsLock': Key.CAPS_LOCK,
         'Insert': Key.INSERT,
         'F1': Key.F1,
         'F2': Key.F2,
@@ -181,7 +180,8 @@ function createWindow() {
         'F9': Key.F9,
         'F10': Key.F10,
         'F11': Key.F11,
-        'F12': Key.F12
+        'F12': Key.F12,
+        ' ': Key.SPACE
     };
 
     // Improved key press handler
@@ -193,15 +193,14 @@ function createWindow() {
                 // Handle special keys
                 if (specialKeyMap[key]) {
                     await keyboard.pressKey(specialKeyMap[key]);
-                    // Don't release special keys immediately - they'll be released on keyup
                 } else {
                     console.warn(`Unmapped special key: ${key}`);
                 }
-            } else if (key.length === 1) {
-                // Regular character keys
-                await keyboard.type(key);
             } else {
-                console.warn(`Unhandled key: ${key}`);
+                // For regular characters, just type them
+                if (key.length === 1) {
+                    await keyboard.type(key);
+                }
             }
             
             return { success: true };
@@ -216,7 +215,7 @@ function createWindow() {
         try {
             console.log(`Key release: ${key}`);
             
-            // Only handle special keys for release
+            // Only release special keys
             if (specialKeyMap[key]) {
                 await keyboard.releaseKey(specialKeyMap[key]);
             }

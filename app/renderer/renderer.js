@@ -298,58 +298,58 @@ document.addEventListener("click", () => {
     }
 });
 
-// Track which special keys are currently pressed
+// Track pressed keys to prevent double typing
 const pressedKeys = new Set();
 
-// Improved keyboard event handlers
+// Special keys that need different handling
+const specialKeys = new Set([
+    'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 
+    'Tab', 'Enter', 'Backspace', 'Delete', 'Escape',
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'Home', 'End', 'PageUp', 'PageDown', 'Insert',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
+    'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
+]);
+
 document.addEventListener('keydown', (event) => {
-    // Prevent default behavior for some keys to avoid browser shortcuts
-    if (['Tab', 'F5', 'F12'].includes(event.key)) {
-        event.preventDefault();
-    }
-    
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
-    
-    // Store the key in pressedKeys set
-    pressedKeys.add(event.key);
-    
-    // Handle key combinations
-    if (pressedKeys.size > 1) {
-        const keyCombo = Array.from(pressedKeys);
-        console.log('Key combo:', keyCombo);
-        
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-combo',
-            data: { keys: keyCombo }
-        });
-    } else {
-        // Single key press
-        console.log('Key down:', event.key, 'Code:', event.code);
-        
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-press',
-            data: { 
-                key: event.key,
-                code: event.code,
-                keyCode: event.keyCode,
-                isSpecial: isSpecialKey(event.key)
-            }
-        });
+
+    // Prevent default for special keys
+    if (specialKeys.has(event.key)) {
+        event.preventDefault();
     }
+
+    // If the key is already pressed, ignore it (prevents double typing)
+    if (pressedKeys.has(event.key)) {
+        return;
+    }
+
+    // Add the key to pressed keys
+    pressedKeys.add(event.key);
+
+    console.log('Key down:', event.key, 'Code:', event.code);
+
+    socket.emit('remote-control', {
+        sessionID,
+        type: 'key-press',
+        data: { 
+            key: event.key,
+            code: event.code,
+            isSpecial: specialKeys.has(event.key)
+        }
+    });
 });
 
 document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
-    
-    // Remove the key from pressedKeys set
+
+    // Remove the key from pressed keys
     pressedKeys.delete(event.key);
-    
-    // Special case for key combinations - notify that the combo is released
-    if (pressedKeys.size === 0) {
+
+    // Only emit keyup for special keys
+    if (specialKeys.has(event.key)) {
         socket.emit('remote-control', {
             sessionID,
             type: 'key-release',
@@ -357,20 +357,6 @@ document.addEventListener('keyup', (event) => {
         });
     }
 });
-
-// Helper function to identify special keys
-function isSpecialKey(key) {
-    const specialKeys = [
-        'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 
-        'Tab', 'Enter', 'Backspace', ' ', 'Delete', 'Escape',
-        'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-        'Home', 'End', 'PageUp', 'PageDown', 'Insert',
-        'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
-        'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
-    ];
-    
-    return specialKeys.includes(key) || key.startsWith('F');
-}
 
 // Improved mouse movement handling
 async function handleRemoteControl(event, sessionID) {
