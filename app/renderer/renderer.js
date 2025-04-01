@@ -437,9 +437,9 @@ document.getElementById('screen-share').addEventListener('click', async (event) 
     });
 });
 
-// राइट क्लिक के लिए इवेंट लिसनर जोड़ें
+// event listener for right click
 document.getElementById('screen-share').addEventListener('contextmenu', async (event) => {
-    event.preventDefault(); // ब्राउज़र का डिफॉल्ट कांटेक्स्ट मेनू नहीं दिखाने के लिए
+    event.preventDefault(); 
     const sessionID = document.getElementById('join-session-id').value;
     socket.emit('remote-control', {
         sessionID,
@@ -507,8 +507,6 @@ socket.on('remote-control', async (data) => {
         console.error('Error details:', error.message);
     }
 });
-
-
 
 
 
