@@ -185,22 +185,16 @@ function createWindow() {
     };
 
     // Improved key press handler
-    ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
+    ipcMain.handle('KEY_PRESS', async (event, { key, code }) => {
         try {
-            console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
+            console.log(`Key press: ${key}, code: ${code}`);
             
-            if (isSpecial) {
-                // Handle special keys
-                if (specialKeyMap[key]) {
-                    await keyboard.pressKey(specialKeyMap[key]);
-                } else {
-                    console.warn(`Unmapped special key: ${key}`);
-                }
+            // Handle special keys
+            if (specialKeyMap[key]) {
+                await keyboard.pressKey(specialKeyMap[key]);
             } else {
-                // For regular characters, just type them
-                if (key.length === 1) {
-                    await keyboard.type(key);
-                }
+                // For regular characters
+                await keyboard.type(key);
             }
             
             return { success: true };
@@ -211,9 +205,9 @@ function createWindow() {
     });
 
     // Key release handler
-    ipcMain.handle('KEY_RELEASE', async (event, { key }) => {
+    ipcMain.handle('KEY_RELEASE', async (event, { key, code }) => {
         try {
-            console.log(`Key release: ${key}`);
+            console.log(`Key release: ${key}, code: ${code}`);
             
             // Only release special keys
             if (specialKeyMap[key]) {
