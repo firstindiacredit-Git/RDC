@@ -434,15 +434,6 @@ document.getElementById('screen-share').addEventListener('contextmenu', async (e
     });
 });
 
-document.addEventListener('keydown', (event) => {
-    const sessionID = document.getElementById('join-session-id').value;
-    socket.emit('remote-control', {
-        sessionID,
-        type: 'key-press',
-        data: { key: event.key }
-    });
-});
-
 // Improved wheel event listener
 document.getElementById('screen-share').addEventListener('wheel', async (event) => {
     event.preventDefault(); // Prevent default browser scrolling
