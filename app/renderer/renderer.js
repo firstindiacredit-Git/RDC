@@ -301,17 +301,26 @@ document.addEventListener("click", () => {
 // Track pressed keys to prevent double typing
 const pressedKeys = new Set();
 
-// Remove the old keydown and keyup event listeners
+// Special keys that need different handling
+const specialKeys = new Set([
+    'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 
+    'Tab', 'Enter', 'Backspace', 'Delete', 'Escape',
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'Home', 'End', 'PageUp', 'PageDown', 'Insert',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
+    'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
+]);
 
-// Add this new event listener for keydown
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Always prevent default for all keys when in remote control mode
-    event.preventDefault();
+    // Prevent default for special keys
+    if (specialKeys.has(event.key)) {
+        event.preventDefault();
+    }
 
-    // If the key is already pressed, ignore it
+    // If the key is already pressed, ignore it (prevents double typing)
     if (pressedKeys.has(event.key)) {
         return;
     }
@@ -321,37 +330,32 @@ document.addEventListener('keydown', (event) => {
 
     console.log('Key down:', event.key, 'Code:', event.code);
 
-    // Send the key event to the host
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
         data: { 
             key: event.key,
             code: event.code,
-            isSpecial: true  // Treat all keys as special to ensure proper handling
+            isSpecial: specialKeys.has(event.key)
         }
     });
 });
 
-// Add this new event listener for keyup
 document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    event.preventDefault();
-
     // Remove the key from pressed keys
     pressedKeys.delete(event.key);
 
-    // Always send key release event
-    socket.emit('remote-control', {
-        sessionID,
-        type: 'key-release',
-        data: { 
-            key: event.key,
-            code: event.code 
-        }
-    });
+    // Only emit keyup for special keys
+    if (specialKeys.has(event.key)) {
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-release',
+            data: { key: event.key, code: event.code }
+        });
+    }
 });
 
 // Improved mouse movement handling
