@@ -101,6 +101,10 @@ socket.on("session-joined", async (sessionID) => {
         // This PC is the client (viewing screen)
         console.log('Joined session, setting up viewer...');
         
+        // Add fullscreen mode
+        document.body.classList.add('in-session');
+        document.getElementById('current-session-id').textContent = `Session: ${sessionID}`;
+        
         // Create peer connection for receiving
         peerConnection = new RTCPeerConnection(configuration);
         
@@ -265,6 +269,7 @@ socket.on('candidate', async (data) => {
 
 // Clean up function
 function cleanupConnection() {
+    document.body.classList.remove('in-session');
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
@@ -482,6 +487,21 @@ socket.on('remote-control', async (data) => {
     } catch (error) {
         console.error('Error executing remote control command:', error);
         console.error('Error details:', error.message);
+    }
+});
+
+// Add exit fullscreen handler
+document.getElementById('exit-fullscreen').addEventListener('click', () => {
+    document.body.classList.remove('in-session');
+    cleanupConnection();
+    socket.disconnect();
+    location.reload(); // पेज को रीफ्रेश करें
+});
+
+// ESC key handler
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && document.body.classList.contains('in-session')) {
+        document.getElementById('exit-fullscreen').click();
     }
 });
 
