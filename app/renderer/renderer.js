@@ -1,3 +1,4 @@
+// Socket.IO setup
 const socket = io('http://192.168.29.140:3000', {
     reconnectionAttempts: 5,
     timeout: 20000,
