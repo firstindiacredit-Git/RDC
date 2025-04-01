@@ -473,13 +473,9 @@ document.getElementById('screen-share').addEventListener('click', async (event) 
     }
 });
 
-<<<<<<< HEAD
-// event listener for right click
-=======
 // राइट क्लिक इवेंट हैंडलर अपडेट
->>>>>>> 09b402990ff8eaf4b14e84ba543e2465b84ddec2
 document.getElementById('screen-share').addEventListener('contextmenu', async (event) => {
-    event.preventDefault(); // ब्राउज़र का डिफॉल्ट कांटेक्स्ट मेनू नहीं दिखाने के लिए
+    event.preventDefault();
     const sessionID = document.getElementById('join-session-id').value;
     if (sessionID && document.body.classList.contains('in-session')) {
         const videoElement = document.getElementById('screen-share');
