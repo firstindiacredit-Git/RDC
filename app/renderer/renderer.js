@@ -374,30 +374,33 @@ async function handleRemoteControl(event, sessionID) {
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         
-        // Get the actual dimensions of the video content (might differ from element size)
-        const videoWidth = videoElement.videoWidth || rect.width;
-        const videoHeight = videoElement.videoHeight || rect.height;
+        // Get the actual video dimensions
+        const videoWidth = videoElement.videoWidth;
+        const videoHeight = videoElement.videoHeight;
         
-        // Calculate relative position (0-1)
-        const relativeX = x / rect.width;
-        const relativeY = y / rect.height;
+        // Get the display element dimensions
+        const displayWidth = rect.width;
+        const displayHeight = rect.height;
         
-        // Use fixed screen resolution for host (e.g., 1920x1080)
-        // If you know the actual resolution, use that instead
-        const targetWidth = 1920;  // Estimated target screen width
-        const targetHeight = 1080; // Estimated target screen height
+        // Calculate scaling factors
+        const scaleX = videoWidth / displayWidth;
+        const scaleY = videoHeight / displayHeight;
         
-        // Calculate absolute position on target screen
-        const absoluteX = Math.round(relativeX * targetWidth);
-        const absoluteY = Math.round(relativeY * targetHeight);
+        // Calculate the actual coordinates on the remote screen
+        const remoteX = Math.round(x * scaleX);
+        const remoteY = Math.round(y * scaleY);
         
-        // Add a small log for debugging
-        console.log(`Mouse coords: rel(${relativeX.toFixed(2)}, ${relativeY.toFixed(2)}) -> abs(${absoluteX}, ${absoluteY})`);
+        // Add bounds checking
+        if (remoteX < 0 || remoteY < 0 || remoteX > videoWidth || remoteY > videoHeight) {
+            return; // Ignore mouse movements outside the video area
+        }
+        
+        console.log(`Mouse: display(${x}, ${y}) -> remote(${remoteX}, ${remoteY})`);
         
         socket.emit('remote-control', {
             sessionID,
             type: 'mouse-move',
-            data: { x: absoluteX, y: absoluteY }
+            data: { x: remoteX, y: remoteY }
         });
     } catch (error) {
         console.error('Error in remote control:', error);
@@ -411,32 +414,80 @@ const MOUSE_MOVE_THROTTLE = 16; // ~60fps (1000ms / 60)
 document.getElementById('screen-share').addEventListener('mousemove', (event) => {
     const now = Date.now();
     
-    // Throttle mouse move events to avoid overwhelming the connection
+    // Throttle mouse move events
     if (now - lastMouseMoveTime >= MOUSE_MOVE_THROTTLE) {
         lastMouseMoveTime = now;
         const sessionID = document.getElementById('join-session-id').value;
-        handleRemoteControl(event, sessionID);
+        if (sessionID && document.body.classList.contains('in-session')) {
+            handleRemoteControl(event, sessionID);
+        }
     }
 });
 
 document.getElementById('screen-share').addEventListener('click', async (event) => {
     const sessionID = document.getElementById('join-session-id').value;
-    socket.emit('remote-control', {
-        sessionID,
-        type: 'mouse-click',
-        data: { button: 'left' }
-    });
+    if (sessionID && document.body.classList.contains('in-session')) {
+        // Get coordinates using the same calculation as mousemove
+        const videoElement = document.getElementById('screen-share');
+        const rect = videoElement.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        const videoWidth = videoElement.videoWidth;
+        const videoHeight = videoElement.videoHeight;
+        const displayWidth = rect.width;
+        const displayHeight = rect.height;
+        
+        const scaleX = videoWidth / displayWidth;
+        const scaleY = videoHeight / displayHeight;
+        
+        const remoteX = Math.round(x * scaleX);
+        const remoteY = Math.round(y * scaleY);
+        
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'mouse-click',
+            data: { 
+                button: 'left',
+                x: remoteX,
+                y: remoteY
+            }
+        });
+    }
 });
 
 // राइट क्लिक के लिए इवेंट लिसनर जोड़ें
 document.getElementById('screen-share').addEventListener('contextmenu', async (event) => {
-    event.preventDefault(); // ब्राउज़र का डिफॉल्ट कांटेक्स्ट मेनू नहीं दिखाने के लिए
+    event.preventDefault();
     const sessionID = document.getElementById('join-session-id').value;
-    socket.emit('remote-control', {
-        sessionID,
-        type: 'mouse-click',
-        data: { button: 'right' }
-    });
+    if (sessionID && document.body.classList.contains('in-session')) {
+        // Get coordinates using the same calculation as mousemove
+        const videoElement = document.getElementById('screen-share');
+        const rect = videoElement.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        const videoWidth = videoElement.videoWidth;
+        const videoHeight = videoElement.videoHeight;
+        const displayWidth = rect.width;
+        const displayHeight = rect.height;
+        
+        const scaleX = videoWidth / displayWidth;
+        const scaleY = videoHeight / displayHeight;
+        
+        const remoteX = Math.round(x * scaleX);
+        const remoteY = Math.round(y * scaleY);
+        
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'mouse-click',
+            data: { 
+                button: 'right',
+                x: remoteX,
+                y: remoteY
+            }
+        });
+    }
 });
 
 // Improved wheel event listener
@@ -503,6 +554,14 @@ document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && document.body.classList.contains('in-session')) {
         document.getElementById('exit-fullscreen').click();
     }
+});
+
+// Add video element load handler
+document.getElementById('screen-share').addEventListener('loadedmetadata', () => {
+    console.log('Video dimensions:', {
+        width: document.getElementById('screen-share').videoWidth,
+        height: document.getElementById('screen-share').videoHeight
+    });
 });
 
 
