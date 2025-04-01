@@ -1,4 +1,3 @@
-// Socket.IO setup
 const socket = io('http://192.168.29.140:3000', {
     reconnectionAttempts: 5,
     timeout: 20000,
@@ -299,56 +298,64 @@ document.addEventListener("click", () => {
     }
 });
 
-// Remove all previous keyboard event listeners and add these new ones
+// Track pressed keys to prevent double typing
+const pressedKeys = new Set();
 
-const videoElement = document.getElementById('screen-share');
+// Special keys that need different handling
+const specialKeys = new Set([
+    'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 
+    'Tab', 'Enter', 'Backspace', 'Delete', 'Escape',
+    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+    'Home', 'End', 'PageUp', 'PageDown', 'Insert',
+    'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
+    'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
+]);
 
-// Single key press handler
-function handleKeyEvent(event) {
-    event.preventDefault();
-    
+document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Only handle events when focused on video element
-    if (document.activeElement !== videoElement) return;
+    // Prevent default for special keys
+    if (specialKeys.has(event.key)) {
+        event.preventDefault();
+    }
 
-    console.log('Key Event:', event.type, event.key);
+    // If the key is already pressed, ignore it (prevents double typing)
+    if (pressedKeys.has(event.key)) {
+        return;
+    }
+
+    // Add the key to pressed keys
+    pressedKeys.add(event.key);
+
+    console.log('Key down:', event.key, 'Code:', event.code);
 
     socket.emit('remote-control', {
         sessionID,
-        type: event.type === 'keydown' ? 'key-down' : 'key-up',
-        data: {
+        type: 'key-press',
+        data: { 
             key: event.key,
-            keyCode: event.keyCode,
             code: event.code,
-            shift: event.shiftKey,
-            ctrl: event.ctrlKey,
-            alt: event.altKey,
-            meta: event.metaKey
+            isSpecial: specialKeys.has(event.key)
         }
     });
-}
-
-// Add focus handling to video element
-videoElement.addEventListener('click', () => {
-    videoElement.focus();
 });
 
-// Add tabindex to make video element focusable
-videoElement.tabIndex = 0;
+document.addEventListener('keyup', (event) => {
+    const sessionID = document.getElementById('join-session-id').value;
+    if (!sessionID) return;
 
-// Add key event listeners to video element only
-videoElement.addEventListener('keydown', handleKeyEvent);
-videoElement.addEventListener('keyup', handleKeyEvent);
+    // Remove the key from pressed keys
+    pressedKeys.delete(event.key);
 
-// Add visual indicator for focus
-videoElement.style.outline = 'none'; // Remove default focus outline
-videoElement.addEventListener('focus', () => {
-    videoElement.style.border = '2px solid #007bff';
-});
-videoElement.addEventListener('blur', () => {
-    videoElement.style.border = '1px solid #ccc';
+    // Only emit keyup for special keys
+    if (specialKeys.has(event.key)) {
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-release',
+            data: { key: event.key, code: event.code }
+        });
+    }
 });
 
 // Improved mouse movement handling
