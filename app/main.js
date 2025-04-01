@@ -189,19 +189,15 @@ function createWindow() {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
-            if (key === 'Backspace') {
-                // Special handling for Backspace
-                await keyboard.pressKey(Key.BACKSPACE);
-                await keyboard.releaseKey(Key.BACKSPACE);
-            } else if (isSpecial) {
-                // Handle other special keys
+            if (isSpecial) {
+                // Handle special keys
                 if (specialKeyMap[key]) {
                     await keyboard.pressKey(specialKeyMap[key]);
                 } else {
                     console.warn(`Unmapped special key: ${key}`);
                 }
             } else {
-                // For regular characters
+                // For regular characters, just type them
                 if (key.length === 1) {
                     await keyboard.type(key);
                 }
