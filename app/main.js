@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const { exec } = require('child_process');
 const { mouse, keyboard, Key } = require('@nut-tree/nut-js');
+const socket = require('socket.io-client');
 
 let mainWindow;
 
@@ -184,88 +185,30 @@ function createWindow() {
         ' ': Key.SPACE
     };
 
-    // Improved key press handler
-    ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
+    // Update remote control handler
+    socket.on('remote-control', async (data) => {
         try {
-            console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
-            
-            if (isSpecial) {
-                // Handle special keys
-                if (specialKeyMap[key]) {
-                    await keyboard.pressKey(specialKeyMap[key]);
-                } else {
-                    console.warn(`Unmapped special key: ${key}`);
-                }
-            } else {
-                // For regular characters, just type them
-                if (key.length === 1) {
-                    await keyboard.type(key);
-                }
+            switch (data.type) {
+                case 'key-down':
+                    console.log('Key down:', data.data.key);
+                    if (data.data.key.length === 1) {
+                        // For regular characters
+                        await keyboard.type(data.data.key);
+                    } else if (specialKeyMap[data.data.key]) {
+                        // For special keys
+                        await keyboard.pressKey(specialKeyMap[data.data.key]);
+                    }
+                    break;
+                
+                case 'key-up':
+                    console.log('Key up:', data.data.key);
+                    if (specialKeyMap[data.data.key]) {
+                        await keyboard.releaseKey(specialKeyMap[data.data.key]);
+                    }
+                    break;
             }
-            
-            return { success: true };
         } catch (error) {
-            console.error('Key press error:', error);
-            return { success: false, error: error.message };
-        }
-    });
-
-    // Key release handler
-    ipcMain.handle('KEY_RELEASE', async (event, { key }) => {
-        try {
-            console.log(`Key release: ${key}`);
-            
-            // Only release special keys
-            if (specialKeyMap[key]) {
-                await keyboard.releaseKey(specialKeyMap[key]);
-            }
-            
-            return { success: true };
-        } catch (error) {
-            console.error('Key release error:', error);
-            return { success: false, error: error.message };
-        }
-    });
-
-    // Key combo handler (for keyboard shortcuts)
-    ipcMain.handle('KEY_COMBO', async (event, { keys }) => {
-        try {
-            console.log(`Key combo: ${keys.join('+')}`);
-            
-            // Map all keys in the combo
-            const keyObjects = keys.map(key => specialKeyMap[key] || key);
-            
-            // Validate that we have valid keys
-            if (keyObjects.some(k => k === undefined)) {
-                console.warn('Some keys in the combo could not be mapped:', keys);
-                return { success: false, error: 'Invalid key in combo' };
-            }
-            
-            // Press all keys in sequence
-            for (const key of keyObjects) {
-                if (typeof key === 'string' && key.length === 1) {
-                    // For character keys
-                    await keyboard.pressKey(key);
-                } else {
-                    // For special keys
-                    await keyboard.pressKey(key);
-                }
-            }
-            
-            // Release all keys in reverse order
-            for (let i = keyObjects.length - 1; i >= 0; i--) {
-                const key = keyObjects[i];
-                if (typeof key === 'string' && key.length === 1) {
-                    await keyboard.releaseKey(key);
-                } else {
-                    await keyboard.releaseKey(key);
-                }
-            }
-            
-            return { success: true };
-        } catch (error) {
-            console.error('Key combo error:', error);
-            return { success: false, error: error.message };
+            console.error('Error in remote control:', error);
         }
     });
 
