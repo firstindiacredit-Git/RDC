@@ -308,9 +308,8 @@ const pressedKeys = new Set();
 
 // Special keys that need different handling
 const specialKeys = new Set([
-    'Backspace',
     'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 
-    'Tab', 'Enter', 'Delete', 'Escape',
+    'Tab', 'Enter', 'Backspace', 'Delete', 'Escape',
     'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
     'Home', 'End', 'PageUp', 'PageDown', 'Insert',
     'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
@@ -321,8 +320,8 @@ document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Always prevent default for Backspace and other special keys
-    if (event.key === 'Backspace' || specialKeys.has(event.key)) {
+    // Prevent default for special keys
+    if (specialKeys.has(event.key)) {
         event.preventDefault();
     }
 
@@ -336,18 +335,6 @@ document.addEventListener('keydown', (event) => {
 
     console.log('Key down:', event.key, 'Code:', event.code);
 
-    // Special handling for Backspace
-    if (event.key === 'Backspace') {
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-press',
-            data: { 
-                key: 'Backspace',
-                code: 'Backspace',
-                isSpecial: true
-            }
-        });
-    } else {
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
@@ -357,7 +344,6 @@ document.addEventListener('keydown', (event) => {
             isSpecial: specialKeys.has(event.key)
         }
     });
-    }
 });
 
 document.addEventListener('keyup', (event) => {
