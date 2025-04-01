@@ -1,3 +1,17 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Desktop</title>
+</head>
+<body>
+    <h1>Remote Desktop</h1>
+    <video id="screen-share" autoplay></video>
+    <script src="renderer.js"></script>
+</body>
+</html> -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,53 +22,27 @@
     <style>
         body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            overflow: hidden;
             font-family: Arial, sans-serif;
-            background: #f0f0f0;
         }
         
-        .main-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
         #host-section, #client-section {
-            margin: 20px 0;
+            margin: 20px;
             padding: 20px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            background: #fff;
         }
         
         button {
             padding: 10px 20px;
             margin: 10px 0;
             cursor: pointer;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        
-        button:hover {
-            background: #0056b3;
         }
         
         #session-id {
             font-weight: bold;
             color: #007bff;
-        }
-
-        #join-session-id {
-            padding: 8px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            width: 200px;
         }
         
         .fullscreen-container {
@@ -87,40 +75,35 @@
         
         .controls button {
             background: #fff;
-            color: #000;
             border: none;
             padding: 5px 10px;
             margin: 0 5px;
             cursor: pointer;
         }
-
-        /* जब सेशन में हो तब के स्टाइल्स */
+        
         body.in-session .fullscreen-container,
         body.in-session .controls {
             display: block;
         }
         
-        /* सेशन में होने पर छिपाने वाले एलिमेंट्स */
-        body.in-session .main-container {
+        body.in-session #host-section,
+        body.in-session #client-section,
+        body.in-session h1 {
             display: none;
         }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <h1>Remote Desktop</h1>
-        
-        <div id="host-section">
-            <h2>Host a Session</h2>
-            <button id="start-session">Start Remote Access</button>
-            <p>Your Session ID: <span id="session-id">Not connected</span></p>
-        </div>
+    <h1>Remote Desktop</h1>
+    
+    <div id="host-section">
+        <button id="start-session">Start Remote Access</button>
+        <p>Session ID: <span id="session-id"></span></p>
+    </div>
 
-        <div id="client-section">
-            <h2>Join a Session</h2>
-            <input type="text" id="join-session-id" placeholder="Enter Session ID">
-            <button id="join-session">Connect</button>
-        </div>
+    <div id="client-section">
+        <input type="text" id="join-session-id" placeholder="Enter Session ID">
+        <button id="join-session">Connect</button>
     </div>
 
     <div class="fullscreen-container">
@@ -129,9 +112,19 @@
     
     <div class="controls">
         <button id="exit-fullscreen">Exit Session</button>
-        <span id="current-session-id" style="color: white; margin-left: 10px;"></span>
+        <span id="current-session-id"></span>
     </div>
 
     <script src="renderer.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, checking electron API:', !!window.electron);
+            if (!window.electron) {
+                console.error('Electron API not available in renderer');
+            }
+        });
+    </script>
 </body>
 </html>
+
