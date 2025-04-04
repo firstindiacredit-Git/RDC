@@ -475,7 +475,7 @@ document.getElementById('screen-share').addEventListener('click', async (event) 
 
 // राइट क्लिक इवेंट हैंडलर अपडेट
 document.getElementById('screen-share').addEventListener('contextmenu', async (event) => {
-    event.preventDefault(); // ब्राउज़र का डिफॉल्ट कांटेक्स्ट मेनू नहीं दिखाने के लिए
+    event.preventDefault();
     const sessionID = document.getElementById('join-session-id').value;
     if (sessionID && document.body.classList.contains('in-session')) {
         const videoElement = document.getElementById('screen-share');
