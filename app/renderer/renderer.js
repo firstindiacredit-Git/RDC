@@ -332,14 +332,22 @@ document.addEventListener('keydown', (event) => {
 
     // Handle special keys properly
     const isSpecialKey = specialKeys.has(event.key);
+    const keyData = {
+        key: event.key,
+        code: event.code,
+        isSpecial: isSpecialKey
+    };
+
+    // Special handling for Enter and Backspace
+    if (event.key === 'Enter' || event.key === 'Backspace') {
+        keyData.isSpecial = true;
+        console.log('Special key detected:', event.key);
+    }
+
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
-        data: { 
-            key: event.key,
-            code: event.code,
-            isSpecial: isSpecialKey
-        }
+        data: keyData
     });
 });
 
@@ -351,12 +359,16 @@ document.addEventListener('keyup', (event) => {
     pressedKeys.delete(event.key);
 
     // Emit keyup for all special keys
-    if (specialKeys.has(event.key)) {
+    if (specialKeys.has(event.key) || event.key === 'Enter' || event.key === 'Backspace') {
         console.log('Key up:', event.key, 'Code:', event.code);
         socket.emit('remote-control', {
             sessionID,
             type: 'key-release',
-            data: { key: event.key, code: event.code }
+            data: { 
+                key: event.key, 
+                code: event.code,
+                isSpecial: true
+            }
         });
     }
 });
