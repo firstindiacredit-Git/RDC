@@ -189,6 +189,14 @@ function createWindow() {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
+            // Add specific handling for Backspace
+            if (key === 'Backspace') {
+                console.log('Handling Backspace key');
+                await keyboard.pressKey(Key.BACKSPACE);
+                await keyboard.releaseKey(Key.BACKSPACE);
+                return { success: true };
+            }
+            
             if (isSpecial) {
                 // Handle special keys
                 if (specialKeyMap[key]) {
