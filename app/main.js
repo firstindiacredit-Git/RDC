@@ -193,7 +193,14 @@ function createWindow() {
                 // Handle special keys
                 if (specialKeyMap[key]) {
                     console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
-                    await keyboard.pressKey(specialKeyMap[key]);
+                    // For backspace, we need to press and release quickly
+                    if (key === 'Backspace') {
+                        await keyboard.pressKey(specialKeyMap[key]);
+                        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+                        await keyboard.releaseKey(specialKeyMap[key]);
+                    } else {
+                        await keyboard.pressKey(specialKeyMap[key]);
+                    }
                 } else {
                     console.warn(`Unmapped special key: ${key}`);
                 }
@@ -296,5 +303,44 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
+    }
+});
+
+// Update remote-control handler
+socket.on('remote-control', async (data) => {
+    try {
+        switch (data.type) {
+            case 'mouse-move':
+                await window.electron.sendMouseMove(data.data.x, data.data.y);
+                break;
+            case 'mouse-click':
+                console.log('Mouse click:', data.data.button);
+                await window.electron.sendMouseClick(data.data.button || 'left', false);
+                break;
+            case 'mouse-scroll':
+                console.log('Mouse scroll: deltaY =', data.data.deltaY);
+                await window.electron.sendMouseScroll(data.data.deltaY);
+                break;
+            case 'key-press':
+                console.log('Processing key press:', data.data.key, 'isSpecial:', data.data.isSpecial);
+                if (data.data.isSpecial) {
+                    // For special keys like backspace
+                    await window.electron.sendKeyPress(data.data.key, true);
+                } else {
+                    // For regular keys
+                    await window.electron.sendKeyPress(data.data.key, false);
+                }
+                break;
+            case 'key-release':
+                console.log('Processing key release:', data.data.key);
+                await window.electron.sendKeyRelease(data.data.key);
+                break;
+            case 'execute-command':
+                await window.electron.executeCommand(data.data.command);
+                break;
+        }
+    } catch (error) {
+        console.error('Error executing remote control command:', error);
+        console.error('Error details:', error.message);
     }
 });
