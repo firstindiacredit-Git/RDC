@@ -138,6 +138,7 @@ io.on('connection', (socket) => {
         const targetSession = sessions[data.sessionID];
         if (targetSession) {
             // Forward the command to the host
+            console.log('Forwarding remote control:', data);
             io.to(targetSession.host).emit('remote-control', data);
         }
     });
