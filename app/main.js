@@ -189,12 +189,10 @@ function createWindow() {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
-            // Always treat Enter and Backspace as special keys
-            if (isSpecial || key === 'Enter' || key === 'Backspace') {
-                const specialKey = specialKeyMap[key];
-                if (specialKey) {
-                    console.log(`Pressing special key: ${key} (${specialKey})`);
-                    await keyboard.pressKey(specialKey);
+            if (isSpecial) {
+                // Handle special keys
+                if (specialKeyMap[key]) {
+                    await keyboard.pressKey(specialKeyMap[key]);
                 } else {
                     console.warn(`Unmapped special key: ${key}`);
                 }
@@ -213,17 +211,13 @@ function createWindow() {
     });
 
     // Key release handler
-    ipcMain.handle('KEY_RELEASE', async (event, { key, isSpecial }) => {
+    ipcMain.handle('KEY_RELEASE', async (event, { key }) => {
         try {
-            console.log(`Key release: ${key}, isSpecial: ${isSpecial}`);
+            console.log(`Key release: ${key}`);
             
-            // Always treat Enter and Backspace as special keys
-            if (isSpecial || key === 'Enter' || key === 'Backspace') {
-                const specialKey = specialKeyMap[key];
-                if (specialKey) {
-                    console.log(`Releasing special key: ${key} (${specialKey})`);
-                    await keyboard.releaseKey(specialKey);
-                }
+            // Only release special keys
+            if (specialKeyMap[key]) {
+                await keyboard.releaseKey(specialKeyMap[key]);
             }
             
             return { success: true };
