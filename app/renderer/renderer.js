@@ -328,7 +328,7 @@ document.addEventListener('keydown', (event) => {
     // Add the key to pressed keys
     pressedKeys.add(event.key);
 
-    console.log('Key down:', event.key, 'Code:', event.code);
+    console.log('Key down:', event.key, 'Code:', event.code, 'Is Special:', specialKeys.has(event.key));
 
     socket.emit('remote-control', {
         sessionID,
@@ -336,7 +336,7 @@ document.addEventListener('keydown', (event) => {
         data: { 
             key: event.key,
             code: event.code,
-            isSpecial: specialKeys.has(event.key)
+            isSpecial: specialKeys.has(event.key) || event.key === 'Backspace'
         }
     });
 });
@@ -349,7 +349,8 @@ document.addEventListener('keyup', (event) => {
     pressedKeys.delete(event.key);
 
     // Only emit keyup for special keys
-    if (specialKeys.has(event.key)) {
+    if (specialKeys.has(event.key) || event.key === 'Backspace') {
+        console.log('Key up:', event.key, 'Code:', event.code);
         socket.emit('remote-control', {
             sessionID,
             type: 'key-release',
