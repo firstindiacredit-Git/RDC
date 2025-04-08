@@ -349,13 +349,13 @@ document.addEventListener('keyup', (event) => {
     pressedKeys.delete(event.key);
 
     // Only emit keyup for special keys
-    if (specialKeys.has(event.key)) {
+   // if (specialKeys.has(event.key)) {
         socket.emit('remote-control', {
             sessionID,
             type: 'key-release',
             data: { key: event.key, code: event.code }
         });
-    }
+    //}
 });
 
 // Improved mouse movement handling
