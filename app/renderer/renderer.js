@@ -315,7 +315,7 @@ document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Prevent default for all special keys including Backspace
+    // Prevent default for special keys
     if (specialKeys.has(event.key)) {
         event.preventDefault();
     }
@@ -330,14 +330,13 @@ document.addEventListener('keydown', (event) => {
 
     console.log('Key down:', event.key, 'Code:', event.code);
 
-    // Always send key press event for Backspace
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
         data: { 
             key: event.key,
             code: event.code,
-            isSpecial: true  // Mark Backspace as special key
+            isSpecial: specialKeys.has(event.key)
         }
     });
 });
