@@ -181,8 +181,7 @@ function createWindow() {
         'F10': Key.F10,
         'F11': Key.F11,
         'F12': Key.F12,
-        ' ': Key.SPACE,
-        'Backspace': Key.BACKSPACE
+        ' ': Key.SPACE
     };
 
     // Improved key press handler
@@ -190,7 +189,7 @@ function createWindow() {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
-            if (isSpecial || specialKeyMap[key]) {
+            if (isSpecial) {
                 // Handle special keys
                 const specialKey = specialKeyMap[key];
                 if (specialKey) {
@@ -218,9 +217,11 @@ function createWindow() {
         try {
             console.log(`Key release: ${key}`);
             
-            // Only release special keys
-            if (specialKeyMap[key]) {
-                await keyboard.releaseKey(specialKeyMap[key]);
+            // Release special keys
+            const specialKey = specialKeyMap[key];
+            if (specialKey) {
+                console.log(`Releasing special key: ${key} (${specialKey})`);
+                await keyboard.releaseKey(specialKey);
             }
             
             return { success: true };
