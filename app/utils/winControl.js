@@ -8,61 +8,75 @@ if (!fs.existsSync(scriptsDir)) {
   fs.mkdirSync(scriptsDir, { recursive: true });
 }
 
-// Create PowerShell scripts for mouse and keyboard operations
+// Create improved PowerShell scripts
 const mouseMoveScript = path.join(scriptsDir, 'mouse-move.ps1');
 fs.writeFileSync(mouseMoveScript, `
-[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
-[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($args[0], $args[1])
+Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int info);' -Name 'User32' -Namespace 'Win32'
+Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);' -Name 'User32SetCursor' -Namespace 'Win32'
+
+# Set cursor position
+[Win32.User32SetCursor]::SetCursorPos($args[0], $args[1])
 `);
 
 const mouseClickScript = path.join(scriptsDir, 'mouse-click.ps1');
 fs.writeFileSync(mouseClickScript, `
-[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int info);' -Name 'User32' -Namespace 'Win32'
+
 $button = $args[0]
 $double = $args[1]
 
-Add-Type -AssemblyName System.Windows.Forms
+# Define constants
+$MOUSEEVENTF_LEFTDOWN = 0x0002
+$MOUSEEVENTF_LEFTUP = 0x0004
+$MOUSEEVENTF_RIGHTDOWN = 0x0008
+$MOUSEEVENTF_RIGHTUP = 0x0010
+
 if ($button -eq "left") {
+    [Win32.User32]::mouse_event($MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+    Start-Sleep -Milliseconds 10
+    [Win32.User32]::mouse_event($MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+    
     if ($double -eq "true") {
-        [System.Windows.Forms.SendKeys]::SendWait('{ENTER}{ENTER}')
-    } else {
-        [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+        Start-Sleep -Milliseconds 10
+        [Win32.User32]::mouse_event($MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+        Start-Sleep -Milliseconds 10
+        [Win32.User32]::mouse_event($MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
     }
 } elseif ($button -eq "right") {
-    [System.Windows.Forms.SendKeys]::SendWait('+{F10}')
+    [Win32.User32]::mouse_event($MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+    Start-Sleep -Milliseconds 10
+    [Win32.User32]::mouse_event($MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
 }
-`);
-
-const keyPressScript = path.join(scriptsDir, 'key-press.ps1');
-fs.writeFileSync(keyPressScript, `
-[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
-Add-Type -AssemblyName System.Windows.Forms
-[System.Windows.Forms.SendKeys]::SendWait($args[0])
 `);
 
 const mouseScrollScript = path.join(scriptsDir, 'mouse-scroll.ps1');
 fs.writeFileSync(mouseScrollScript, `
-[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern void mouse_event(int flags, int dx, int dy, int cButtons, int info);' -Name 'User32' -Namespace 'Win32'
+
 $amount = [int]$args[0]
 
-Add-Type -AssemblyName System.Windows.Forms
-if ($amount -gt 0) {
-    for ($i=0; $i -lt [Math]::Abs($amount); $i++) {
-        [System.Windows.Forms.SendKeys]::SendWait("{DOWN}")
-    }
-} else {
-    for ($i=0; $i -lt [Math]::Abs($amount); $i++) {
-        [System.Windows.Forms.SendKeys]::SendWait("{UP}")
-    }
-}
+# Define constants
+$MOUSEEVENTF_WHEEL = 0x0800
+
+[Win32.User32]::mouse_event($MOUSEEVENTF_WHEEL, 0, 0, $amount, 0)
 `);
 
-// Windows mouse and keyboard automation
+const keyPressScript = path.join(scriptsDir, 'key-press.ps1');
+fs.writeFileSync(keyPressScript, `
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.SendKeys]::SendWait($args[0])
+`);
+
+// Windows mouse and keyboard automation functions
 function moveMouse(x, y) {
   return new Promise((resolve, reject) => {
     exec(`powershell -ExecutionPolicy Bypass -File "${mouseMoveScript}" ${x} ${y}`, (error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        console.error('PowerShell error:', error);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
@@ -70,20 +84,28 @@ function moveMouse(x, y) {
 function mouseClick(button = 'left', double = false) {
   return new Promise((resolve, reject) => {
     exec(`powershell -ExecutionPolicy Bypass -File "${mouseClickScript}" ${button} ${double}`, (error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        console.error('PowerShell error:', error);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
 
 function mouseScroll(deltaY) {
   return new Promise((resolve, reject) => {
-    // Calculate scroll amount
-    const scrollAmount = Math.min(Math.ceil(Math.abs(deltaY) / 100), 10) * Math.sign(deltaY);
+    // Scale the deltaY to a reasonable value for mouse_event
+    const scrollAmount = Math.min(Math.ceil(Math.abs(deltaY) / 5), 20) * Math.sign(deltaY);
     
     exec(`powershell -ExecutionPolicy Bypass -File "${mouseScrollScript}" ${scrollAmount}`, (error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        console.error('PowerShell error:', error);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
@@ -139,8 +161,12 @@ function sendKey(key, isSpecial) {
     }
     
     exec(`powershell -ExecutionPolicy Bypass -File "${keyPressScript}" "${keyToSend}"`, (error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        console.error('PowerShell error:', error);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }
@@ -149,8 +175,12 @@ function sendKeyCombination(keys) {
   return new Promise((resolve, reject) => {
     const mappedKeys = keys.map(k => specialKeyMap[k] || k).join('');
     exec(`powershell -ExecutionPolicy Bypass -File "${keyPressScript}" "${mappedKeys}"`, (error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        console.error('PowerShell error:', error);
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 }

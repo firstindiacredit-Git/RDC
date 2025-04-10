@@ -2,11 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { v4: uuidv4 } = require('uuid');
-const { app: electronApp, BrowserWindow, desktopCapturer, ipcMain, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const { exec } = require('child_process');
-const robot = require('robotjs');
 
 const expressApp = express();
 
@@ -152,9 +150,6 @@ io.on('connection', (socket) => {
         });
     });
 });
-
-
-
 
 // Start server
 server.listen(3000, '0.0.0.0', () => {
