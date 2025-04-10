@@ -6,7 +6,7 @@ const { app: electronApp, BrowserWindow, desktopCapturer, ipcMain, clipboard } =
 const path = require('path');
 const fs = require('fs').promises;
 const { exec } = require('child_process');
-const { mouse, keyboard, Key } = require('@nut-tree/nut-js');
+const robot = require('robotjs');
 
 const expressApp = express();
 

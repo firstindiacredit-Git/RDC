@@ -2,7 +2,7 @@ const { app, BrowserWindow, desktopCapturer, ipcMain, clipboard } = require('ele
 const path = require('path');
 const fs = require('fs').promises;
 const { exec } = require('child_process');
-const { mouse, keyboard, Key } = require('@nut-tree/nut-js');
+const robot = require('robotjs');
 
 let mainWindow;
 
@@ -94,12 +94,12 @@ function createWindow() {
         });
     });
 
-    // Mouse control with better precision using @nut-tree/nut-js
+    // Mouse control with RobotJS
     ipcMain.handle('MOUSE_MOVE', async (event, { x, y }) => {
         try {
             // Set the mouse position directly to absolute coordinates
             console.log(`Setting mouse position to: ${x}, ${y}`);
-            await mouse.setPosition({ x, y });
+            robot.moveMouse(x, y);
             return { success: true };
         } catch (error) {
             console.error('Mouse move error:', error);
@@ -107,19 +107,18 @@ function createWindow() {
         }
     });
 
-    // Very fast scrolling implementation
+    // Mouse scrolling with RobotJS
     ipcMain.handle('MOUSE_SCROLL', async (event, { deltaY }) => {
         try {
             console.log(`Mouse scroll: deltaY=${deltaY}`);
             
-            // Much more aggressive scrolling
-            // Using a very small divisor and higher maximum
-            const scrollAmount = Math.min(Math.abs(Math.ceil(deltaY / 5)), 20);
+            // Calculate scroll amount
+            const scrollAmount = Math.min(Math.abs(Math.ceil(deltaY / 5)), 10);
             
             if (deltaY > 0) {
-                await mouse.scrollDown(scrollAmount);
+                robot.scrollMouse(0, -scrollAmount); // RobotJS scrolls in opposite direction
             } else {
-                await mouse.scrollUp(scrollAmount);
+                robot.scrollMouse(0, scrollAmount);
             }
             
             return { success: true };
@@ -132,15 +131,13 @@ function createWindow() {
     ipcMain.handle('MOUSE_CLICK', async (event, { button = 'left', double = false }) => {
         try {
             console.log(`Mouse click: ${button}, double: ${double}`);
+            
             if (double) {
-                await mouse.doubleClick(button === 'left' ? 0 : 1);
+                robot.mouseClick(button, true);
             } else {
-                if (button === 'left') {
-                    await mouse.leftClick();
-                } else if (button === 'right') {
-                    await mouse.rightClick();
-                }
+                robot.mouseClick(button);
             }
+            
             return { success: true };
         } catch (error) {
             console.error('Mouse click error:', error);
@@ -148,43 +145,43 @@ function createWindow() {
         }
     });
 
-    // Special key mapping
+    // Special key mapping for RobotJS
     const specialKeyMap = {
-        'Enter': Key.ENTER,
-        'Backspace': Key.BACKSPACE,
-        'Tab': Key.TAB,
-        'Shift': Key.SHIFT,
-        'Control': Key.CONTROL,
-        'Alt': Key.ALT,
-        'Meta': Key.META,
-        'CapsLock': Key.CAPS_LOCK,
-        'Delete': Key.DELETE,
-        'Escape': Key.ESCAPE,
-        'ArrowUp': Key.UP,
-        'ArrowDown': Key.DOWN,
-        'ArrowLeft': Key.LEFT,
-        'ArrowRight': Key.RIGHT,
-        'Home': Key.HOME,
-        'End': Key.END,
-        'PageUp': Key.PAGE_UP,
-        'PageDown': Key.PAGE_DOWN,
-        'Insert': Key.INSERT,
-        'F1': Key.F1,
-        'F2': Key.F2,
-        'F3': Key.F3,
-        'F4': Key.F4,
-        'F5': Key.F5,
-        'F6': Key.F6,
-        'F7': Key.F7,
-        'F8': Key.F8,
-        'F9': Key.F9,
-        'F10': Key.F10,
-        'F11': Key.F11,
-        'F12': Key.F12,
-        ' ': Key.SPACE
+        'Enter': 'enter',
+        'Backspace': 'backspace',
+        'Tab': 'tab',
+        'Shift': 'shift',
+        'Control': 'control',
+        'Alt': 'alt',
+        'Meta': 'command', // or 'win' on Windows
+        'CapsLock': 'capslock',
+        'Delete': 'delete',
+        'Escape': 'escape',
+        'ArrowUp': 'up',
+        'ArrowDown': 'down',
+        'ArrowLeft': 'left',
+        'ArrowRight': 'right',
+        'Home': 'home',
+        'End': 'end',
+        'PageUp': 'pageup',
+        'PageDown': 'pagedown',
+        'Insert': 'insert',
+        'F1': 'f1',
+        'F2': 'f2',
+        'F3': 'f3',
+        'F4': 'f4',
+        'F5': 'f5',
+        'F6': 'f6',
+        'F7': 'f7',
+        'F8': 'f8',
+        'F9': 'f9',
+        'F10': 'f10',
+        'F11': 'f11',
+        'F12': 'f12',
+        ' ': 'space'
     };
 
-    // Improved key press handler
+    // Key press handler with RobotJS
     ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
@@ -193,13 +190,12 @@ function createWindow() {
                 // Handle special keys
                 if (specialKeyMap[key]) {
                     console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
+                    robot.keyToggle(specialKeyMap[key], 'down');
+                    
                     // For backspace, we need to press and release quickly
                     if (key === 'Backspace') {
-                        await keyboard.pressKey(specialKeyMap[key]);
                         await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
-                        await keyboard.releaseKey(specialKeyMap[key]);
-                    } else {
-                        await keyboard.pressKey(specialKeyMap[key]);
+                        robot.keyToggle(specialKeyMap[key], 'up');
                     }
                 } else {
                     console.warn(`Unmapped special key: ${key}`);
@@ -207,7 +203,7 @@ function createWindow() {
             } else {
                 // For regular characters, just type them
                 if (key.length === 1) {
-                    await keyboard.type(key);
+                    robot.typeString(key);
                 }
             }
             
@@ -218,14 +214,14 @@ function createWindow() {
         }
     });
 
-    // Key release handler
+    // Key release handler with RobotJS
     ipcMain.handle('KEY_RELEASE', async (event, { key }) => {
         try {
             console.log(`Key release: ${key}`);
             
             // Only release special keys
             if (specialKeyMap[key]) {
-                await keyboard.releaseKey(specialKeyMap[key]);
+                robot.keyToggle(specialKeyMap[key], 'up');
             }
             
             return { success: true };
@@ -235,7 +231,7 @@ function createWindow() {
         }
     });
 
-    // Key combo handler (for keyboard shortcuts)
+    // Key combo handler with RobotJS
     ipcMain.handle('KEY_COMBO', async (event, { keys }) => {
         try {
             console.log(`Key combo: ${keys.join('+')}`);
@@ -253,10 +249,10 @@ function createWindow() {
             for (const key of keyObjects) {
                 if (typeof key === 'string' && key.length === 1) {
                     // For character keys
-                    await keyboard.pressKey(key);
+                    robot.keyToggle(key.toLowerCase(), 'down');
                 } else {
                     // For special keys
-                    await keyboard.pressKey(key);
+                    robot.keyToggle(key, 'down');
                 }
             }
             
@@ -264,9 +260,9 @@ function createWindow() {
             for (let i = keyObjects.length - 1; i >= 0; i--) {
                 const key = keyObjects[i];
                 if (typeof key === 'string' && key.length === 1) {
-                    await keyboard.releaseKey(key);
+                    robot.keyToggle(key.toLowerCase(), 'up');
                 } else {
-                    await keyboard.releaseKey(key);
+                    robot.keyToggle(key, 'up');
                 }
             }
             

@@ -13,8 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@nut-tree/nut-js": "^3.1.2",
     "express": "^4.21.2",
+    "robotjs": "^0.6.0",
     "socket.io": "^4.8.1",
     "uuid": "^9.0.1",
     "webrtc": "^1.14.1"
