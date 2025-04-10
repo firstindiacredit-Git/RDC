@@ -330,6 +330,20 @@ document.addEventListener('keydown', (event) => {
 
     console.log('Key down:', event.key, 'Code:', event.code);
 
+    // Handle backspace specially
+    if (event.key === 'Backspace') {
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-press',
+            data: { 
+                key: 'Backspace',
+                code: 'Backspace',
+                isSpecial: true
+            }
+        });
+        return;
+    }
+
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
@@ -348,14 +362,25 @@ document.addEventListener('keyup', (event) => {
     // Remove the key from pressed keys
     pressedKeys.delete(event.key);
 
-    // Only emit keyup for special keys
-   // if (specialKeys.has(event.key)) {
+    // Handle backspace specially
+    if (event.key === 'Backspace') {
         socket.emit('remote-control', {
             sessionID,
             type: 'key-release',
-            data: { key: event.key, code: event.code }
+            data: { 
+                key: 'Backspace',
+                code: 'Backspace',
+                isSpecial: true
+            }
         });
-    //}
+        return;
+    }
+
+    socket.emit('remote-control', {
+        sessionID,
+        type: 'key-release',
+        data: { key: event.key, code: event.code }
+    });
 });
 
 // Improved mouse movement handling

@@ -192,6 +192,7 @@ function createWindow() {
             if (isSpecial) {
                 // Handle special keys
                 if (specialKeyMap[key]) {
+                    console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
                     await keyboard.pressKey(specialKeyMap[key]);
                 } else {
                     console.warn(`Unmapped special key: ${key}`);
