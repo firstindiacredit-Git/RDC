@@ -298,8 +298,10 @@ document.addEventListener("click", () => {
     }
 });
 
-// Track pressed keys to prevent double typing
+// Track pressed keys and timing
 const pressedKeys = new Set();
+let lastKeyPressTime = 0;
+const KEY_PRESS_DELAY = 200; // Increased delay to prevent repeats
 
 // Only track these special keys
 const specialKeys = new Set([
@@ -311,6 +313,21 @@ const activeModifiers = new Set();
 
 // Function to check if a key is a modifier
 const isModifierKey = (key) => key === 'Shift';
+
+// Function to handle key press
+const handleKeyPress = (key, isSpecial) => {
+    const currentTime = Date.now();
+    if (currentTime - lastKeyPressTime < KEY_PRESS_DELAY) {
+        return;
+    }
+    lastKeyPressTime = currentTime;
+    
+    if (isSpecial) {
+        window.electron.sendKeyPress(key, true);
+    } else {
+        window.electron.sendKeyPress(key, false);
+    }
+};
 
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
@@ -325,14 +342,9 @@ document.addEventListener('keydown', (event) => {
         return;
     }
 
-    // Always prevent default for special keys
+    // Prevent default for special keys
     if (specialKeys.has(key)) {
         event.preventDefault();
-    }
-
-    // Update modifier state
-    if (isModifierKey(key)) {
-        activeModifiers.add(key);
     }
 
     // If the key is already pressed, ignore it
@@ -343,30 +355,15 @@ document.addEventListener('keydown', (event) => {
     // Add the key to pressed keys
     pressedKeys.add(key);
 
-    console.log('Key down:', key, 'Active modifiers:', [...activeModifiers]);
-
-    // Handle special keys
-    if (specialKeys.has(key)) {
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-press',
-            data: { 
-                key: key,
-                isSpecial: true
-            }
-        });
-        return;
+    // Update modifier state
+    if (isModifierKey(key)) {
+        activeModifiers.add(key);
     }
 
-    // Handle regular keys (a-z, 0-9)
-    socket.emit('remote-control', {
-        sessionID,
-        type: 'key-press',
-        data: { 
-            key: key,
-            isSpecial: false
-        }
-    });
+    console.log('Key down:', key, 'Active modifiers:', [...activeModifiers]);
+
+    // Handle the key press
+    handleKeyPress(key, specialKeys.has(key));
 });
 
 document.addEventListener('keyup', (event) => {
@@ -392,14 +389,7 @@ document.addEventListener('keyup', (event) => {
 
     // Always send key release for special keys
     if (specialKeys.has(key)) {
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-release',
-            data: { 
-                key: key,
-                isSpecial: true
-            }
-        });
+        window.electron.sendKeyRelease(key, true);
     }
 });
 

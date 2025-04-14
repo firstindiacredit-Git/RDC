@@ -170,6 +170,10 @@ function createWindow() {
         'Tab': Key.TAB
     };
 
+    // Track last key press time
+    let lastKeyPressTime = 0;
+    const KEY_PRESS_DELAY = 200; // Increased delay to prevent repeats
+
     // Key combo handler (for keyboard shortcuts)
     ipcMain.handle('KEY_COMBO', async (event, { keys }) => {
         try {
@@ -211,6 +215,13 @@ function createWindow() {
     // Improved key press handler
     ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
         try {
+            // Check if enough time has passed since last key press
+            const currentTime = Date.now();
+            if (currentTime - lastKeyPressTime < KEY_PRESS_DELAY) {
+                return { success: true };
+            }
+            lastKeyPressTime = currentTime;
+
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
             if (isSpecial) {
@@ -226,13 +237,18 @@ function createWindow() {
                 if (/^[a-z0-9]$/.test(key)) {
                     console.log(`Typing character: "${key}"`);
                     try {
-                        await keyboard.type(key);
+                        // Use type with a small delay
+                        await keyboard.type(key, { delay: 100 });
                     } catch (typeError) {
                         console.error(`Error typing character "${key}":`, typeError);
-                        // Try pressing the key directly as fallback
+                        // Try using pressKey as fallback
                         try {
-                            await keyboard.pressKey(key);
-                            await keyboard.releaseKey(key);
+                            const keyObj = Key[key.toUpperCase()];
+                            if (keyObj) {
+                                await keyboard.pressKey(keyObj);
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                                await keyboard.releaseKey(keyObj);
+                            }
                         } catch (fallbackError) {
                             console.error('Fallback error:', fallbackError);
                         }
@@ -276,6 +292,11 @@ function createWindow() {
         clipboard.writeText(text);
         return { success: true };
     });
+
+    // Initialize keyboard configuration
+    keyboard.config.autoDelayMs = 200;
+    keyboard.config.autoDelayMin = 100;
+    keyboard.config.autoDelayMax = 300;
 
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
     mainWindow.webContents.openDevTools();
