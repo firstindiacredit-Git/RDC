@@ -150,7 +150,7 @@ function createWindow() {
 
     // Special key mapping
     const specialKeyMap = {
-        'Enter': Key.ENTER,
+        'Enter': Key.RETURN,
         'Backspace': Key.BACKSPACE,
         'Tab': Key.TAB,
         'Shift': Key.SHIFT,
@@ -189,19 +189,16 @@ function createWindow() {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
-            if (isSpecial) {
+            if (isSpecial && specialKeyMap[key]) {
                 // Handle special keys
-                if (specialKeyMap[key]) {
-                    console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
-                    await keyboard.pressKey(specialKeyMap[key]);
-                } else {
-                    console.warn(`Unmapped special key: ${key}`);
-                }
+                console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
+                await keyboard.pressKey(specialKeyMap[key]);
+            } else if (key.length === 1) {
+                // For regular characters (alphanumeric and other printable chars)
+                console.log(`Typing character: ${key}`);
+                await keyboard.type(key);
             } else {
-                // For regular characters, just type them
-                if (key.length === 1) {
-                    await keyboard.type(key);
-                }
+                console.warn(`Unhandled key: ${key}`);
             }
             
             return { success: true };
@@ -216,8 +213,9 @@ function createWindow() {
         try {
             console.log(`Key release: ${key}`);
             
-            // Only release special keys
+            // Only release special keys that require release
             if (specialKeyMap[key]) {
+                console.log(`Releasing special key: ${key} -> ${specialKeyMap[key]}`);
                 await keyboard.releaseKey(specialKeyMap[key]);
             }
             
@@ -245,20 +243,22 @@ function createWindow() {
             // Press all keys in sequence
             for (const key of keyObjects) {
                 if (typeof key === 'string' && key.length === 1) {
-                    // For character keys
-                    await keyboard.pressKey(key);
+                    // For character keys that aren't mapped
+                    console.log(`Pressing character in combo: ${key}`);
+                    await keyboard.type(key);
                 } else {
                     // For special keys
+                    console.log(`Pressing special key in combo: ${key}`);
                     await keyboard.pressKey(key);
                 }
             }
             
-            // Release all keys in reverse order
+            // Release all keys in reverse order (only for special keys)
             for (let i = keyObjects.length - 1; i >= 0; i--) {
                 const key = keyObjects[i];
-                if (typeof key === 'string' && key.length === 1) {
-                    await keyboard.releaseKey(key);
-                } else {
+                if (!(typeof key === 'string' && key.length === 1)) {
+                    // Only release special keys
+                    console.log(`Releasing special key in combo: ${key}`);
                     await keyboard.releaseKey(key);
                 }
             }

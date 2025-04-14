@@ -308,17 +308,16 @@ const specialKeys = new Set([
     'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
     'Home', 'End', 'PageUp', 'PageDown', 'Insert',
     'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
-    'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
+    'F7', 'F8', 'F9', 'F10', 'F11', 'F12', ' '
 ]);
 
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Prevent default for special keys
-    if (specialKeys.has(event.key)) {
-        event.preventDefault();
-    }
+    // Prevent default behavior for all keys during remote session
+    // This stops browser from intercepting shortcuts and allows special keys to work
+    event.preventDefault();
 
     // If the key is already pressed, ignore it (prevents double typing)
     if (pressedKeys.has(event.key)) {
@@ -328,21 +327,7 @@ document.addEventListener('keydown', (event) => {
     // Add the key to pressed keys
     pressedKeys.add(event.key);
 
-    console.log('Key down:', event.key, 'Code:', event.code);
-
-    // Handle backspace specially
-    if (event.key === 'Backspace') {
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-press',
-            data: { 
-                key: 'Backspace',
-                code: 'Backspace',
-                isSpecial: true
-            }
-        });
-        return;
-    }
+    console.log('Key down:', event.key, 'Code:', event.code, 'isSpecial:', specialKeys.has(event.key));
 
     socket.emit('remote-control', {
         sessionID,
@@ -359,27 +344,20 @@ document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
+    // Prevent default for all keys
+    event.preventDefault();
+
     // Remove the key from pressed keys
     pressedKeys.delete(event.key);
-
-    // Handle backspace specially
-    if (event.key === 'Backspace') {
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-release',
-            data: { 
-                key: 'Backspace',
-                code: 'Backspace',
-                isSpecial: true
-            }
-        });
-        return;
-    }
 
     socket.emit('remote-control', {
         sessionID,
         type: 'key-release',
-        data: { key: event.key, code: event.code }
+        data: { 
+            key: event.key,
+            code: event.code,
+            isSpecial: specialKeys.has(event.key)
+        }
     });
 });
 
@@ -497,7 +475,7 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendMouseScroll(data.data.deltaY);
                 break;
             case 'key-press':
-                console.log('Processing key press:', data.data.key);
+                console.log('Processing key press:', data.data.key, 'isSpecial:', data.data.isSpecial);
                 await window.electron.sendKeyPress(data.data.key, data.data.isSpecial);
                 break;
             case 'key-combo':
@@ -505,7 +483,7 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendKeyCombo(data.data.keys);
                 break;
             case 'key-release':
-                console.log('Processing key release:', data.data.key);
+                console.log('Processing key release:', data.data.key, 'isSpecial:', data.data.isSpecial);
                 await window.electron.sendKeyRelease(data.data.key);
                 break;
             case 'execute-command':
