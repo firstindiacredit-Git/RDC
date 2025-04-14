@@ -97,9 +97,22 @@ function createWindow() {
     // Mouse control with better precision using @nut-tree/nut-js
     ipcMain.handle('MOUSE_MOVE', async (event, { x, y }) => {
         try {
+            // Ensure coordinates are valid numbers
+            const validX = Math.max(0, Math.round(Number(x) || 0));
+            const validY = Math.max(0, Math.round(Number(y) || 0));
+            
             // Set the mouse position directly to absolute coordinates
-            console.log(`Setting mouse position to: ${x}, ${y}`);
-            await mouse.setPosition({ x, y });
+            console.log(`Setting mouse position to: ${validX}, ${validY}`);
+            
+            try {
+                await mouse.setPosition({ x: validX, y: validY });
+            } catch (error) {
+                console.error('Error setting mouse position:', error);
+                // Try alternative method as fallback
+                console.log('Using fallback mouse position method');
+                await mouse.move([{ x: validX, y: validY }]);
+            }
+            
             return { success: true };
         } catch (error) {
             console.error('Mouse move error:', error);
@@ -191,16 +204,78 @@ function createWindow() {
             
             if (isSpecial) {
                 // Handle special keys
-                if (specialKeyMap[key]) {
-                    console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
-                    await keyboard.pressKey(specialKeyMap[key]);
-                } else {
-                    console.warn(`Unmapped special key: ${key}`);
+                switch(key) {
+                    case 'Enter':
+                        await keyboard.pressKey(Key.RETURN);
+                        break;
+                    case 'Backspace':
+                        await keyboard.pressKey(Key.BACKSPACE);
+                        break;
+                    case 'Tab':
+                        await keyboard.pressKey(Key.TAB);
+                        break;
+                    case 'Shift':
+                        await keyboard.pressKey(Key.SHIFT);
+                        break;
+                    case 'Control':
+                        await keyboard.pressKey(Key.CONTROL);
+                        break;
+                    case 'Alt':
+                        await keyboard.pressKey(Key.ALT);
+                        break;
+                    case 'Meta':
+                        await keyboard.pressKey(Key.META);
+                        break;
+                    case 'CapsLock':
+                        await keyboard.pressKey(Key.CAPS_LOCK);
+                        break;
+                    case 'Delete':
+                        await keyboard.pressKey(Key.DELETE);
+                        break;
+                    case 'Escape':
+                        await keyboard.pressKey(Key.ESCAPE);
+                        break;
+                    case 'ArrowUp':
+                        await keyboard.pressKey(Key.UP);
+                        break;
+                    case 'ArrowDown':
+                        await keyboard.pressKey(Key.DOWN);
+                        break;
+                    case 'ArrowLeft':
+                        await keyboard.pressKey(Key.LEFT);
+                        break;
+                    case 'ArrowRight':
+                        await keyboard.pressKey(Key.RIGHT);
+                        break;
+                    default:
+                        console.warn(`Unmapped special key: ${key}`);
+                        if (specialKeyMap[key]) {
+                            console.log(`Using fallback from map: ${specialKeyMap[key]}`);
+                            await keyboard.pressKey(specialKeyMap[key]);
+                        }
                 }
             } else {
                 // For regular characters, just type them
                 if (key.length === 1) {
-                    await keyboard.type(key);
+                    console.log(`Typing regular character: "${key}"`);
+                    try {
+                        await keyboard.type(key);
+                    } catch (typeError) {
+                        console.error(`Error typing character "${key}":`, typeError);
+                        // Fallback method
+                        try {
+                            const keyObj = Key[key.toUpperCase()];
+                            if (keyObj) {
+                                console.log(`Using fallback key object: ${keyObj}`);
+                                await keyboard.pressKey(keyObj);
+                                await keyboard.releaseKey(keyObj);
+                            } else {
+                                console.error(`No fallback found for character "${key}"`);
+                            }
+                        } catch (fallbackError) {
+                            console.error('Fallback error:', fallbackError);
+                        }
+                    }
                 }
             }
             
@@ -216,10 +291,58 @@ function createWindow() {
         try {
             console.log(`Key release: ${key}, isSpecial: ${isSpecial}`);
             
-            // Only release special keys or keys that are in the specialKeyMap
-            if (isSpecial && specialKeyMap[key]) {
-                console.log(`Releasing special key: ${key} -> ${specialKeyMap[key]}`);
-                await keyboard.releaseKey(specialKeyMap[key]);
+            // Only release special keys
+            if (isSpecial) {
+                switch(key) {
+                    case 'Enter':
+                        await keyboard.releaseKey(Key.RETURN);
+                        break;
+                    case 'Backspace':
+                        await keyboard.releaseKey(Key.BACKSPACE);
+                        break;
+                    case 'Tab':
+                        await keyboard.releaseKey(Key.TAB);
+                        break;
+                    case 'Shift':
+                        await keyboard.releaseKey(Key.SHIFT);
+                        break;
+                    case 'Control':
+                        await keyboard.releaseKey(Key.CONTROL);
+                        break;
+                    case 'Alt':
+                        await keyboard.releaseKey(Key.ALT);
+                        break;
+                    case 'Meta':
+                        await keyboard.releaseKey(Key.META);
+                        break;
+                    case 'CapsLock':
+                        await keyboard.releaseKey(Key.CAPS_LOCK);
+                        break;
+                    case 'Delete':
+                        await keyboard.releaseKey(Key.DELETE);
+                        break;
+                    case 'Escape':
+                        await keyboard.releaseKey(Key.ESCAPE);
+                        break;
+                    case 'ArrowUp':
+                        await keyboard.releaseKey(Key.UP);
+                        break;
+                    case 'ArrowDown':
+                        await keyboard.releaseKey(Key.DOWN);
+                        break;
+                    case 'ArrowLeft':
+                        await keyboard.releaseKey(Key.LEFT);
+                        break;
+                    case 'ArrowRight':
+                        await keyboard.releaseKey(Key.RIGHT);
+                        break;
+                    default:
+                        console.warn(`Unmapped special key for release: ${key}`);
+                        if (specialKeyMap[key]) {
+                            console.log(`Using fallback from map for release: ${specialKeyMap[key]}`);
+                            await keyboard.releaseKey(specialKeyMap[key]);
+                        }
+                }
             }
             
             return { success: true };
@@ -234,41 +357,69 @@ function createWindow() {
         try {
             console.log(`Key combo: ${keys.join('+')}`);
             
-            // Map all keys in the combo
-            const keyObjects = keys.map(key => specialKeyMap[key] || key);
+            // Helper function to get the key object 
+            const getKeyObject = (key) => {
+                switch(key) {
+                    case 'Enter': return Key.RETURN;
+                    case 'Backspace': return Key.BACKSPACE;
+                    case 'Tab': return Key.TAB;
+                    case 'Shift': return Key.SHIFT;
+                    case 'Control': return Key.CONTROL;
+                    case 'Alt': return Key.ALT;
+                    case 'Meta': return Key.META;
+                    case 'CapsLock': return Key.CAPS_LOCK;
+                    case 'Delete': return Key.DELETE;
+                    case 'Escape': return Key.ESCAPE;
+                    case 'ArrowUp': return Key.UP;
+                    case 'ArrowDown': return Key.DOWN;
+                    case 'ArrowLeft': return Key.LEFT;
+                    case 'ArrowRight': return Key.RIGHT;
+                    default: 
+                        if (specialKeyMap[key]) {
+                            return specialKeyMap[key];
+                        }
+                        return key; // For regular characters
+                }
+            };
             
-            // Validate that we have valid keys
-            if (keyObjects.some(k => k === undefined)) {
-                console.warn('Some keys in the combo could not be mapped:', keys);
-                return { success: false, error: 'Invalid key in combo' };
-            }
-            
-            // Press all modifier keys first
+            // Get mapped keys
             const modifierIndices = [];
-            for (let i = 0; i < keys.length - 1; i++) {
-                if (['Control', 'Alt', 'Shift', 'Meta'].includes(keys[i])) {
-                    await keyboard.pressKey(specialKeyMap[keys[i]]);
+            const keyObjects = [];
+            
+            // Map all keys and track modifiers
+            for (let i = 0; i < keys.length; i++) {
+                const key = keys[i];
+                keyObjects.push(getKeyObject(key));
+                
+                // Track modifier keys (all except the last if it's a combo)
+                if (i < keys.length - 1 && ['Control', 'Alt', 'Shift', 'Meta'].includes(key)) {
                     modifierIndices.push(i);
                 }
             }
             
-            // Then press the main key (usually the last one)
-            const lastKey = keys[keys.length - 1];
-            if (specialKeyMap[lastKey]) {
-                await keyboard.pressKey(specialKeyMap[lastKey]);
-            } else if (lastKey.length === 1) {
+            // Press all modifier keys first
+            for (let i = 0; i < modifierIndices.length; i++) {
+                await keyboard.pressKey(keyObjects[modifierIndices[i]]);
+                console.log(`Pressed modifier: ${keys[modifierIndices[i]]}`);
+            }
+            
+            // Press the main key (last key)
+            const lastKey = keyObjects[keyObjects.length - 1];
+            const lastKeyName = keys[keys.length - 1];
+            
+            if (typeof lastKey === 'string' && lastKey.length === 1) {
+                console.log(`Typing character: ${lastKey}`);
                 await keyboard.type(lastKey);
+            } else {
+                console.log(`Pressing key: ${lastKeyName}`);
+                await keyboard.pressKey(lastKey);
+                await keyboard.releaseKey(lastKey);
             }
             
-            // Release the main key
-            if (specialKeyMap[lastKey]) {
-                await keyboard.releaseKey(specialKeyMap[lastKey]);
-            }
-            
-            // Release all modifier keys in reverse order
+            // Release modifier keys in reverse order
             for (let i = modifierIndices.length - 1; i >= 0; i--) {
-                const idx = modifierIndices[i];
-                await keyboard.releaseKey(specialKeyMap[keys[idx]]);
+                await keyboard.releaseKey(keyObjects[modifierIndices[i]]);
+                console.log(`Released modifier: ${keys[modifierIndices[i]]}`);
             }
             
             return { success: true };

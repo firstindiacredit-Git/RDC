@@ -339,7 +339,48 @@ document.addEventListener('keydown', (event) => {
 
     console.log('Key down:', event.key, 'Code:', event.code, 'Active modifiers:', [...activeModifiers]);
 
-    // Check for key combinations
+    // Check for known key combinations
+    if (activeModifiers.has('Alt') && event.key === 'Tab') {
+        console.log('Detected Alt+Tab combination');
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-combo',
+            data: { keys: ['Alt', 'Tab'] }
+        });
+        return;
+    }
+    
+    if (activeModifiers.has('Control') && event.key === 'c') {
+        console.log('Detected Ctrl+C combination');
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-combo',
+            data: { keys: ['Control', 'c'] }
+        });
+        return;
+    }
+    
+    if (activeModifiers.has('Control') && event.key === 'v') {
+        console.log('Detected Ctrl+V combination');
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-combo',
+            data: { keys: ['Control', 'v'] }
+        });
+        return;
+    }
+    
+    if (activeModifiers.has('Control') && event.key === 'a') {
+        console.log('Detected Ctrl+A combination');
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-combo',
+            data: { keys: ['Control', 'a'] }
+        });
+        return;
+    }
+
+    // Check for other key combinations
     if (activeModifiers.size > 0 && !isModifier) {
         const keys = [...activeModifiers, event.key];
         console.log('Sending key combo:', keys);
