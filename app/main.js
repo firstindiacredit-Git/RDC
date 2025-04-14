@@ -161,6 +161,11 @@ function createWindow() {
         }
     });
 
+    // Initialize keyboard configuration
+    keyboard.config.autoDelayMs = 0; // Remove auto delay
+    keyboard.config.autoDelayMin = 0;
+    keyboard.config.autoDelayMax = 0;
+
     // Special key mapping
     const specialKeyMap = {
         'enter': Key.RETURN,
@@ -197,8 +202,8 @@ function createWindow() {
                 // For regular characters (letters and numbers)
                 if (key.length === 1) {
                     try {
-                        // For alphabet characters, use type directly
-                        if (/^[a-zA-Z]$/.test(key)) {
+                        // For alphabet characters and numbers, use type directly
+                        if (/^[a-zA-Z0-9]$/.test(key)) {
                             await keyboard.type(key);
                         } else {
                             // For other characters, try the Key enum
@@ -277,11 +282,6 @@ function createWindow() {
         clipboard.writeText(text);
         return { success: true };
     });
-
-    // Initialize keyboard configuration
-    keyboard.config.autoDelayMs = 50;
-    keyboard.config.autoDelayMin = 20;
-    keyboard.config.autoDelayMax = 100;
 
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
     mainWindow.webContents.openDevTools();

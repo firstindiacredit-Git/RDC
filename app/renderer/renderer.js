@@ -512,33 +512,20 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendMouseMove(data.data.x, data.data.y);
                 break;
             case 'mouse-click':
-                console.log('Mouse click:', data.data.button);
                 await window.electron.sendMouseClick(data.data.button || 'left', false);
                 break;
             case 'mouse-scroll':
-                console.log('Mouse scroll: deltaY =', data.data.deltaY);
                 await window.electron.sendMouseScroll(data.data.deltaY);
                 break;
             case 'key-press':
-                console.log('Processing key press:', data.data.key);
                 await window.electron.sendKeyPress(data.data.key, data.data.isSpecial);
                 break;
-            case 'key-combo':
-                console.log('Processing key combo:', data.data.keys);
-                await window.electron.sendKeyCombo(data.data.keys);
-                break;
             case 'key-release':
-                console.log('Processing key release:', data.data.key);
                 await window.electron.sendKeyRelease(data.data.key, data.data.isSpecial);
                 break;
-            case 'execute-command':
-                await window.electron.executeCommand(data.data.command);
-                break;
-            // Add more cases as needed
         }
     } catch (error) {
         console.error('Error executing remote control command:', error);
-        console.error('Error details:', error.message);
     }
 });
 
