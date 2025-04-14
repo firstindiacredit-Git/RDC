@@ -308,16 +308,26 @@ const specialKeys = new Set([
     'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
     'Home', 'End', 'PageUp', 'PageDown', 'Insert',
     'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
-    'F7', 'F8', 'F9', 'F10', 'F11', 'F12', ' '
+    'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
 ]);
+
+// Track active modifier keys
+const activeModifiers = new Set();
 
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Prevent default behavior for all keys during remote session
-    // This stops browser from intercepting shortcuts and allows special keys to work
-    event.preventDefault();
+    // Prevent default for special keys
+    if (specialKeys.has(event.key)) {
+        event.preventDefault();
+    }
+
+    // Check if this is a modifier key
+    const isModifier = ['Control', 'Alt', 'Shift', 'Meta'].includes(event.key);
+    if (isModifier) {
+        activeModifiers.add(event.key);
+    }
 
     // If the key is already pressed, ignore it (prevents double typing)
     if (pressedKeys.has(event.key)) {
@@ -327,8 +337,22 @@ document.addEventListener('keydown', (event) => {
     // Add the key to pressed keys
     pressedKeys.add(event.key);
 
-    console.log('Key down:', event.key, 'Code:', event.code, 'isSpecial:', specialKeys.has(event.key));
+    console.log('Key down:', event.key, 'Code:', event.code, 'Active modifiers:', [...activeModifiers]);
 
+    // Check for key combinations
+    if (activeModifiers.size > 0 && !isModifier) {
+        const keys = [...activeModifiers, event.key];
+        console.log('Sending key combo:', keys);
+        
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-combo',
+            data: { keys }
+        });
+        return;
+    }
+
+    // Send key press event with special flag for special keys
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
@@ -344,17 +368,20 @@ document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Prevent default for all keys
-    event.preventDefault();
-
     // Remove the key from pressed keys
     pressedKeys.delete(event.key);
 
+    // Remove from active modifiers if it's a modifier key
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+        activeModifiers.delete(event.key);
+    }
+
+    // Send key release event with special flag for special keys
     socket.emit('remote-control', {
         sessionID,
         type: 'key-release',
         data: { 
-            key: event.key,
+            key: event.key, 
             code: event.code,
             isSpecial: specialKeys.has(event.key)
         }
@@ -437,15 +464,6 @@ document.getElementById('screen-share').addEventListener('contextmenu', async (e
     });
 });
 
-// document.addEventListener('keydown', (event) => {
-//     const sessionID = document.getElementById('join-session-id').value;
-//     socket.emit('remote-control', {
-//         sessionID,
-//         type: 'key-press',
-//         data: { key: event.key }
-//     });
-// });
-
 // Improved wheel event listener
 document.getElementById('screen-share').addEventListener('wheel', async (event) => {
     event.preventDefault(); // Prevent default browser scrolling
@@ -475,7 +493,7 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendMouseScroll(data.data.deltaY);
                 break;
             case 'key-press':
-                console.log('Processing key press:', data.data.key, 'isSpecial:', data.data.isSpecial);
+                console.log('Processing key press:', data.data.key);
                 await window.electron.sendKeyPress(data.data.key, data.data.isSpecial);
                 break;
             case 'key-combo':
@@ -483,8 +501,8 @@ socket.on('remote-control', async (data) => {
                 await window.electron.sendKeyCombo(data.data.keys);
                 break;
             case 'key-release':
-                console.log('Processing key release:', data.data.key, 'isSpecial:', data.data.isSpecial);
-                await window.electron.sendKeyRelease(data.data.key);
+                console.log('Processing key release:', data.data.key);
+                await window.electron.sendKeyRelease(data.data.key, data.data.isSpecial);
                 break;
             case 'execute-command':
                 await window.electron.executeCommand(data.data.command);

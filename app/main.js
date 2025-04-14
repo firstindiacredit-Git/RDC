@@ -189,16 +189,19 @@ function createWindow() {
         try {
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
-            if (isSpecial && specialKeyMap[key]) {
+            if (isSpecial) {
                 // Handle special keys
-                console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
-                await keyboard.pressKey(specialKeyMap[key]);
-            } else if (key.length === 1) {
-                // For regular characters (alphanumeric and other printable chars)
-                console.log(`Typing character: ${key}`);
-                await keyboard.type(key);
+                if (specialKeyMap[key]) {
+                    console.log(`Pressing special key: ${key} -> ${specialKeyMap[key]}`);
+                    await keyboard.pressKey(specialKeyMap[key]);
+                } else {
+                    console.warn(`Unmapped special key: ${key}`);
+                }
             } else {
-                console.warn(`Unhandled key: ${key}`);
+                // For regular characters, just type them
+                if (key.length === 1) {
+                    await keyboard.type(key);
+                }
             }
             
             return { success: true };
@@ -209,12 +212,12 @@ function createWindow() {
     });
 
     // Key release handler
-    ipcMain.handle('KEY_RELEASE', async (event, { key }) => {
+    ipcMain.handle('KEY_RELEASE', async (event, { key, isSpecial }) => {
         try {
-            console.log(`Key release: ${key}`);
+            console.log(`Key release: ${key}, isSpecial: ${isSpecial}`);
             
-            // Only release special keys that require release
-            if (specialKeyMap[key]) {
+            // Only release special keys or keys that are in the specialKeyMap
+            if (isSpecial && specialKeyMap[key]) {
                 console.log(`Releasing special key: ${key} -> ${specialKeyMap[key]}`);
                 await keyboard.releaseKey(specialKeyMap[key]);
             }
@@ -240,27 +243,32 @@ function createWindow() {
                 return { success: false, error: 'Invalid key in combo' };
             }
             
-            // Press all keys in sequence
-            for (const key of keyObjects) {
-                if (typeof key === 'string' && key.length === 1) {
-                    // For character keys that aren't mapped
-                    console.log(`Pressing character in combo: ${key}`);
-                    await keyboard.type(key);
-                } else {
-                    // For special keys
-                    console.log(`Pressing special key in combo: ${key}`);
-                    await keyboard.pressKey(key);
+            // Press all modifier keys first
+            const modifierIndices = [];
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (['Control', 'Alt', 'Shift', 'Meta'].includes(keys[i])) {
+                    await keyboard.pressKey(specialKeyMap[keys[i]]);
+                    modifierIndices.push(i);
                 }
             }
             
-            // Release all keys in reverse order (only for special keys)
-            for (let i = keyObjects.length - 1; i >= 0; i--) {
-                const key = keyObjects[i];
-                if (!(typeof key === 'string' && key.length === 1)) {
-                    // Only release special keys
-                    console.log(`Releasing special key in combo: ${key}`);
-                    await keyboard.releaseKey(key);
-                }
+            // Then press the main key (usually the last one)
+            const lastKey = keys[keys.length - 1];
+            if (specialKeyMap[lastKey]) {
+                await keyboard.pressKey(specialKeyMap[lastKey]);
+            } else if (lastKey.length === 1) {
+                await keyboard.type(lastKey);
+            }
+            
+            // Release the main key
+            if (specialKeyMap[lastKey]) {
+                await keyboard.releaseKey(specialKeyMap[lastKey]);
+            }
+            
+            // Release all modifier keys in reverse order
+            for (let i = modifierIndices.length - 1; i >= 0; i--) {
+                const idx = modifierIndices[i];
+                await keyboard.releaseKey(specialKeyMap[keys[idx]]);
             }
             
             return { success: true };
@@ -298,3 +306,4 @@ app.on('activate', () => {
         createWindow();
     }
 });
+
