@@ -161,7 +161,7 @@ function createWindow() {
         }
     });
 
-    // Special key mapping - simplified to only include needed keys
+    // Special key mapping
     const specialKeyMap = {
         'Enter': Key.RETURN,
         'Backspace': Key.BACKSPACE,
@@ -170,58 +170,9 @@ function createWindow() {
         'Tab': Key.TAB
     };
 
-    // Track last key press time
-    let lastKeyPressTime = 0;
-    const KEY_PRESS_DELAY = 200; // Increased delay to prevent repeats
-
-    // Key combo handler (for keyboard shortcuts)
-    ipcMain.handle('KEY_COMBO', async (event, { keys }) => {
-        try {
-            console.log(`Key combo: ${keys.join('+')}`);
-            
-            // Helper function to get the key object 
-            const getKeyObject = (key) => {
-                if (specialKeyMap[key]) {
-                    return specialKeyMap[key];
-                }
-                return key; // For regular characters
-            };
-            
-            // Get mapped keys
-            const keyObjects = keys.map(key => getKeyObject(key));
-            
-            // Press all keys in sequence
-            for (const key of keyObjects) {
-                await keyboard.pressKey(key);
-                console.log(`Pressed key: ${key}`);
-            }
-            
-            // Small delay to ensure the keys are registered
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            // Release keys in reverse order
-            for (let i = keyObjects.length - 1; i >= 0; i--) {
-                await keyboard.releaseKey(keyObjects[i]);
-                console.log(`Released key: ${keyObjects[i]}`);
-            }
-            
-            return { success: true };
-        } catch (error) {
-            console.error('Key combo error:', error);
-            return { success: false, error: error.message };
-        }
-    });
-
     // Improved key press handler
     ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
         try {
-            // Check if enough time has passed since last key press
-            const currentTime = Date.now();
-            if (currentTime - lastKeyPressTime < KEY_PRESS_DELAY) {
-                return { success: true };
-            }
-            lastKeyPressTime = currentTime;
-
             console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
             
             if (isSpecial) {
@@ -233,25 +184,21 @@ function createWindow() {
                     console.warn(`No mapping found for special key: ${key}`);
                 }
             } else {
-                // For regular characters (a-z, 0-9)
-                if (/^[a-z0-9]$/.test(key)) {
+                // For regular characters (letters and numbers)
+                if (key.length === 1 || /^[0-9]$/.test(key)) {
                     console.log(`Typing character: "${key}"`);
                     try {
-                        // Use type with a small delay
-                        await keyboard.type(key, { delay: 100 });
-                    } catch (typeError) {
-                        console.error(`Error typing character "${key}":`, typeError);
-                        // Try using pressKey as fallback
-                        try {
-                            const keyObj = Key[key.toUpperCase()];
-                            if (keyObj) {
-                                await keyboard.pressKey(keyObj);
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                                await keyboard.releaseKey(keyObj);
-                            }
-                        } catch (fallbackError) {
-                            console.error('Fallback error:', fallbackError);
+                        // Try to get the key from the Key enum first
+                        const keyObj = Key[key.toUpperCase()];
+                        if (keyObj) {
+                            await keyboard.pressKey(keyObj);
+                            await keyboard.releaseKey(keyObj);
+                        } else {
+                            // If not found in Key enum, use type
+                            await keyboard.type(key);
                         }
+                    } catch (error) {
+                        console.error(`Error handling key "${key}":`, error);
                     }
                 }
             }
@@ -294,9 +241,9 @@ function createWindow() {
     });
 
     // Initialize keyboard configuration
-    keyboard.config.autoDelayMs = 200;
-    keyboard.config.autoDelayMin = 100;
-    keyboard.config.autoDelayMax = 300;
+    keyboard.config.autoDelayMs = 50;
+    keyboard.config.autoDelayMin = 20;
+    keyboard.config.autoDelayMax = 100;
 
     mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
     mainWindow.webContents.openDevTools();

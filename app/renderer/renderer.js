@@ -298,12 +298,10 @@ document.addEventListener("click", () => {
     }
 });
 
-// Track pressed keys and timing
+// Track pressed keys
 const pressedKeys = new Set();
-let lastKeyPressTime = 0;
-const KEY_PRESS_DELAY = 200; // Increased delay to prevent repeats
 
-// Only track these special keys
+// Special keys that need different handling
 const specialKeys = new Set([
     'Shift', 'CapsLock', 'Tab', 'Enter', 'Backspace'
 ]);
@@ -314,38 +312,12 @@ const activeModifiers = new Set();
 // Function to check if a key is a modifier
 const isModifierKey = (key) => key === 'Shift';
 
-// Function to handle key press
-const handleKeyPress = (key, isSpecial) => {
-    const currentTime = Date.now();
-    if (currentTime - lastKeyPressTime < KEY_PRESS_DELAY) {
-        return;
-    }
-    lastKeyPressTime = currentTime;
-    
-    if (isSpecial) {
-        window.electron.sendKeyPress(key, true);
-    } else {
-        window.electron.sendKeyPress(key, false);
-    }
-};
-
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Get the key in lowercase for letters
-    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-
-    // Check if it's a valid key (a-z, 0-9, or special key)
-    const isValidKey = /^[a-z0-9]$/.test(key) || specialKeys.has(key);
-    if (!isValidKey) {
-        return;
-    }
-
-    // Prevent default for special keys
-    if (specialKeys.has(key)) {
-        event.preventDefault();
-    }
+    // Get the key
+    const key = event.key;
 
     // If the key is already pressed, ignore it
     if (pressedKeys.has(key)) {
@@ -360,24 +332,26 @@ document.addEventListener('keydown', (event) => {
         activeModifiers.add(key);
     }
 
-    console.log('Key down:', key, 'Active modifiers:', [...activeModifiers]);
+    console.log('Key down:', key, 'Code:', event.code);
 
-    // Handle the key press
-    handleKeyPress(key, specialKeys.has(key));
+    // Handle special keys
+    if (specialKeys.has(key)) {
+        window.electron.sendKeyPress(key, true);
+        return;
+    }
+
+    // Handle regular keys (letters and numbers)
+    if (key.length === 1 || /^[0-9]$/.test(key)) {
+        window.electron.sendKeyPress(key, false);
+    }
 });
 
 document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Get the key in lowercase for letters
-    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-
-    // Check if it's a valid key
-    const isValidKey = /^[a-z0-9]$/.test(key) || specialKeys.has(key);
-    if (!isValidKey) {
-        return;
-    }
+    // Get the key
+    const key = event.key;
 
     // Remove from pressed keys
     pressedKeys.delete(key);
