@@ -161,40 +161,13 @@ function createWindow() {
         }
     });
 
-    // Special key mapping
+    // Special key mapping - simplified to only include needed keys
     const specialKeyMap = {
         'Enter': Key.RETURN,
         'Backspace': Key.BACKSPACE,
-        'Tab': Key.TAB,
         'Shift': Key.SHIFT,
-        'Control': Key.CONTROL,
-        'Alt': Key.ALT,
-        'Meta': Key.META,
         'CapsLock': Key.CAPS_LOCK,
-        'Delete': Key.DELETE,
-        'Escape': Key.ESCAPE,
-        'ArrowUp': Key.UP,
-        'ArrowDown': Key.DOWN,
-        'ArrowLeft': Key.LEFT,
-        'ArrowRight': Key.RIGHT,
-        'Home': Key.HOME,
-        'End': Key.END,
-        'PageUp': Key.PAGE_UP,
-        'PageDown': Key.PAGE_DOWN,
-        'Insert': Key.INSERT,
-        'F1': Key.F1,
-        'F2': Key.F2,
-        'F3': Key.F3,
-        'F4': Key.F4,
-        'F5': Key.F5,
-        'F6': Key.F6,
-        'F7': Key.F7,
-        'F8': Key.F8,
-        'F9': Key.F9,
-        'F10': Key.F10,
-        'F11': Key.F11,
-        'F12': Key.F12,
-        ' ': Key.SPACE
+        'Tab': Key.TAB
     };
 
     // Key combo handler (for keyboard shortcuts)
@@ -249,9 +222,9 @@ function createWindow() {
                     console.warn(`No mapping found for special key: ${key}`);
                 }
             } else {
-                // For regular characters, just type them
-                if (key.length === 1) {
-                    console.log(`Typing regular character: "${key}"`);
+                // For regular characters (a-z, 0-9)
+                if (/^[a-z0-9]$/.test(key)) {
+                    console.log(`Typing character: "${key}"`);
                     try {
                         await keyboard.type(key);
                     } catch (typeError) {

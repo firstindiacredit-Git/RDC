@@ -301,88 +301,69 @@ document.addEventListener("click", () => {
 // Track pressed keys to prevent double typing
 const pressedKeys = new Set();
 
-// Special keys that need different handling
+// Only track these special keys
 const specialKeys = new Set([
-    'Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 
-    'Tab', 'Enter', 'Backspace', 'Delete', 'Escape',
-    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-    'Home', 'End', 'PageUp', 'PageDown', 'Insert',
-    'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 
-    'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
+    'Shift', 'CapsLock', 'Tab', 'Enter', 'Backspace'
 ]);
 
 // Track active modifier keys
 const activeModifiers = new Set();
 
 // Function to check if a key is a modifier
-const isModifierKey = (key) => ['Control', 'Alt', 'Shift', 'Meta'].includes(key);
+const isModifierKey = (key) => key === 'Shift';
 
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Always prevent default for special keys to avoid browser shortcuts
-    if (specialKeys.has(event.key) || event.altKey || event.ctrlKey || event.metaKey) {
+    // Get the key in lowercase for letters
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+
+    // Check if it's a valid key (a-z, 0-9, or special key)
+    const isValidKey = /^[a-z0-9]$/.test(key) || specialKeys.has(key);
+    if (!isValidKey) {
+        return;
+    }
+
+    // Always prevent default for special keys
+    if (specialKeys.has(key)) {
         event.preventDefault();
     }
 
     // Update modifier state
-    if (isModifierKey(event.key)) {
-        activeModifiers.add(event.key);
+    if (isModifierKey(key)) {
+        activeModifiers.add(key);
     }
 
-    // If the key is already pressed, ignore it (prevents double typing)
-    if (pressedKeys.has(event.key)) {
+    // If the key is already pressed, ignore it
+    if (pressedKeys.has(key)) {
         return;
     }
 
     // Add the key to pressed keys
-    pressedKeys.add(event.key);
+    pressedKeys.add(key);
 
-    console.log('Key down:', event.key, 'Code:', event.code, 'Active modifiers:', [...activeModifiers]);
-
-    // Handle Alt+Tab specially
-    if (activeModifiers.has('Alt') && event.key === 'Tab') {
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-combo',
-            data: { keys: ['Alt', 'Tab'] }
-        });
-        return;
-    }
-
-    // Handle other special key combinations
-    if (activeModifiers.size > 0 && !isModifierKey(event.key)) {
-        const keys = [...activeModifiers, event.key];
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-combo',
-            data: { keys }
-        });
-        return;
-    }
+    console.log('Key down:', key, 'Active modifiers:', [...activeModifiers]);
 
     // Handle special keys
-    if (specialKeys.has(event.key)) {
+    if (specialKeys.has(key)) {
         socket.emit('remote-control', {
             sessionID,
             type: 'key-press',
             data: { 
-                key: event.key,
-                code: event.code,
+                key: key,
                 isSpecial: true
             }
         });
         return;
     }
 
-    // Handle regular keys
+    // Handle regular keys (a-z, 0-9)
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
         data: { 
-            key: event.key,
-            code: event.code,
+            key: key,
             isSpecial: false
         }
     });
@@ -392,22 +373,30 @@ document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
+    // Get the key in lowercase for letters
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+
+    // Check if it's a valid key
+    const isValidKey = /^[a-z0-9]$/.test(key) || specialKeys.has(key);
+    if (!isValidKey) {
+        return;
+    }
+
     // Remove from pressed keys
-    pressedKeys.delete(event.key);
+    pressedKeys.delete(key);
 
     // Update modifier state
-    if (isModifierKey(event.key)) {
-        activeModifiers.delete(event.key);
+    if (isModifierKey(key)) {
+        activeModifiers.delete(key);
     }
 
     // Always send key release for special keys
-    if (specialKeys.has(event.key)) {
+    if (specialKeys.has(key)) {
         socket.emit('remote-control', {
             sessionID,
             type: 'key-release',
             data: { 
-                key: event.key,
-                code: event.code,
+                key: key,
                 isSpecial: true
             }
         });
