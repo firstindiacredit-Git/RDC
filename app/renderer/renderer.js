@@ -314,18 +314,20 @@ const specialKeys = new Set([
 // Track active modifier keys
 const activeModifiers = new Set();
 
+// Function to check if a key is a modifier
+const isModifierKey = (key) => ['Control', 'Alt', 'Shift', 'Meta'].includes(key);
+
 document.addEventListener('keydown', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Prevent default for special keys
-    if (specialKeys.has(event.key)) {
+    // Always prevent default for special keys to avoid browser shortcuts
+    if (specialKeys.has(event.key) || event.altKey || event.ctrlKey || event.metaKey) {
         event.preventDefault();
     }
 
-    // Check if this is a modifier key
-    const isModifier = ['Control', 'Alt', 'Shift', 'Meta'].includes(event.key);
-    if (isModifier) {
+    // Update modifier state
+    if (isModifierKey(event.key)) {
         activeModifiers.add(event.key);
     }
 
@@ -339,9 +341,8 @@ document.addEventListener('keydown', (event) => {
 
     console.log('Key down:', event.key, 'Code:', event.code, 'Active modifiers:', [...activeModifiers]);
 
-    // Check for known key combinations
+    // Handle Alt+Tab specially
     if (activeModifiers.has('Alt') && event.key === 'Tab') {
-        console.log('Detected Alt+Tab combination');
         socket.emit('remote-control', {
             sessionID,
             type: 'key-combo',
@@ -349,42 +350,10 @@ document.addEventListener('keydown', (event) => {
         });
         return;
     }
-    
-    if (activeModifiers.has('Control') && event.key === 'c') {
-        console.log('Detected Ctrl+C combination');
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-combo',
-            data: { keys: ['Control', 'c'] }
-        });
-        return;
-    }
-    
-    if (activeModifiers.has('Control') && event.key === 'v') {
-        console.log('Detected Ctrl+V combination');
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-combo',
-            data: { keys: ['Control', 'v'] }
-        });
-        return;
-    }
-    
-    if (activeModifiers.has('Control') && event.key === 'a') {
-        console.log('Detected Ctrl+A combination');
-        socket.emit('remote-control', {
-            sessionID,
-            type: 'key-combo',
-            data: { keys: ['Control', 'a'] }
-        });
-        return;
-    }
 
-    // Check for other key combinations
-    if (activeModifiers.size > 0 && !isModifier) {
+    // Handle other special key combinations
+    if (activeModifiers.size > 0 && !isModifierKey(event.key)) {
         const keys = [...activeModifiers, event.key];
-        console.log('Sending key combo:', keys);
-        
         socket.emit('remote-control', {
             sessionID,
             type: 'key-combo',
@@ -393,14 +362,28 @@ document.addEventListener('keydown', (event) => {
         return;
     }
 
-    // Send key press event with special flag for special keys
+    // Handle special keys
+    if (specialKeys.has(event.key)) {
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-press',
+            data: { 
+                key: event.key,
+                code: event.code,
+                isSpecial: true
+            }
+        });
+        return;
+    }
+
+    // Handle regular keys
     socket.emit('remote-control', {
         sessionID,
         type: 'key-press',
         data: { 
             key: event.key,
             code: event.code,
-            isSpecial: specialKeys.has(event.key)
+            isSpecial: false
         }
     });
 });
@@ -409,24 +392,26 @@ document.addEventListener('keyup', (event) => {
     const sessionID = document.getElementById('join-session-id').value;
     if (!sessionID) return;
 
-    // Remove the key from pressed keys
+    // Remove from pressed keys
     pressedKeys.delete(event.key);
 
-    // Remove from active modifiers if it's a modifier key
-    if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+    // Update modifier state
+    if (isModifierKey(event.key)) {
         activeModifiers.delete(event.key);
     }
 
-    // Send key release event with special flag for special keys
-    socket.emit('remote-control', {
-        sessionID,
-        type: 'key-release',
-        data: { 
-            key: event.key, 
-            code: event.code,
-            isSpecial: specialKeys.has(event.key)
-        }
-    });
+    // Always send key release for special keys
+    if (specialKeys.has(event.key)) {
+        socket.emit('remote-control', {
+            sessionID,
+            type: 'key-release',
+            data: { 
+                key: event.key,
+                code: event.code,
+                isSpecial: true
+            }
+        });
+    }
 });
 
 // Improved mouse movement handling
