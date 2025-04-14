@@ -226,7 +226,7 @@ function createWindow() {
             return { success: true };
         } catch (error) {
             console.error('Key release error:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message }; 
         }
     });
 
