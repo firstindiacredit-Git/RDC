@@ -303,68 +303,116 @@ const pressedKeys = new Set();
 
 // Special keys that need different handling
 const specialKeys = new Set([
-    'Shift', 'CapsLock', 'Tab', 'Enter', 'Backspace'
+    'Shift', 'Control', 'Alt', 'Meta', 'Tab', 'Enter', 'Backspace', 'CapsLock'
 ]);
 
 // Track active modifier keys
 const activeModifiers = new Set();
 
 // Function to check if a key is a modifier
-const isModifierKey = (key) => key === 'Shift';
+const isModifierKey = (key) => ['Shift', 'Control', 'Alt', 'Meta'].includes(key);
 
+// Function to send key events
+const sendKeyEvent = (type, key, isSpecial) => {
+    // Don't process if key is already pressed for press events
+    if (type === 'press' && pressedKeys.has(key)) {
+        return;
+    }
+    
+    // Don't process if key wasn't pressed for release events
+    if (type === 'release' && !pressedKeys.has(key)) {
+        return;
+    }
+    
+    // Update pressed keys state
+    if (type === 'press') {
+        pressedKeys.add(key);
+    } else {
+        pressedKeys.delete(key);
+    }
+    
+    // Send the event
+    if (type === 'press') {
+        window.electron.sendKeyPress(key, isSpecial);
+    } else {
+        window.electron.sendKeyRelease(key, isSpecial);
+    }
+};
+
+// Handle keydown events
 document.addEventListener('keydown', (event) => {
-    const sessionID = document.getElementById('join-session-id').value;
-    if (!sessionID) return;
-
-    // Get the key
-    const key = event.key;
-
-    // If the key is already pressed, ignore it
-    if (pressedKeys.has(key)) {
+    // Ignore keydown events if the key is already pressed
+    if (pressedKeys.has(event.key)) {
         return;
     }
 
-    // Add the key to pressed keys
-    pressedKeys.add(key);
-
+    const key = event.key;
+    const isSpecial = specialKeys.has(key);
+    
+    // Prevent default for special keys
+    if (isSpecial) {
+        event.preventDefault();
+    }
+    
     // Update modifier state
     if (isModifierKey(key)) {
         activeModifiers.add(key);
     }
-
-    console.log('Key down:', key, 'Code:', event.code);
-
-    // Handle special keys
-    if (specialKeys.has(key)) {
-        window.electron.sendKeyPress(key, true);
-        return;
-    }
-
-    // Handle regular keys (letters and numbers)
-    if (key.length === 1 || /^[0-9]$/.test(key)) {
-        window.electron.sendKeyPress(key, false);
+    
+    // Send key press for all keys except session ID input
+    if (!event.target.matches('#join-session-id')) {
+        sendKeyEvent('press', key, isSpecial);
     }
 });
 
+// Handle keyup events
 document.addEventListener('keyup', (event) => {
-    const sessionID = document.getElementById('join-session-id').value;
-    if (!sessionID) return;
-
-    // Get the key
     const key = event.key;
-
-    // Remove from pressed keys
-    pressedKeys.delete(key);
-
+    const isSpecial = specialKeys.has(key);
+    
+    // Prevent default for special keys
+    if (isSpecial) {
+        event.preventDefault();
+    }
+    
     // Update modifier state
     if (isModifierKey(key)) {
         activeModifiers.delete(key);
     }
-
-    // Always send key release for special keys
-    if (specialKeys.has(key)) {
-        window.electron.sendKeyRelease(key, true);
+    
+    // Send key release for all keys except session ID input
+    if (!event.target.matches('#join-session-id')) {
+        sendKeyEvent('release', key, isSpecial);
     }
+});
+
+// Handle session ID input
+const sessionIdInput = document.getElementById('join-session-id');
+if (sessionIdInput) {
+    sessionIdInput.addEventListener('keydown', (event) => {
+        // Allow numbers, letters, and backspace
+        if (!/^[a-zA-Z0-9]$/.test(event.key) && event.key !== 'Backspace') {
+            event.preventDefault();
+        }
+    });
+}
+
+// Handle window blur to clean up key states
+window.addEventListener('blur', () => {
+    // Release all pressed keys when window loses focus
+    const keysToRelease = Array.from(pressedKeys);
+    keysToRelease.forEach(key => {
+        const isSpecial = specialKeys.has(key);
+        window.electron.sendKeyRelease(key, isSpecial);
+    });
+    pressedKeys.clear();
+    activeModifiers.clear();
+});
+
+// Handle window focus to reset key states
+window.addEventListener('focus', () => {
+    pressedKeys.clear();
+    activeModifiers.clear();
 });
 
 // Improved mouse movement handling

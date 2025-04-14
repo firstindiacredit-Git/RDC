@@ -163,39 +163,51 @@ function createWindow() {
 
     // Special key mapping
     const specialKeyMap = {
-        'Enter': Key.RETURN,
-        'Backspace': Key.BACKSPACE,
-        'Shift': Key.SHIFT,
-        'CapsLock': Key.CAPS_LOCK,
-        'Tab': Key.TAB
+        'enter': Key.RETURN,
+        'backspace': Key.BACKSPACE,
+        'shift': Key.SHIFT,
+        'capslock': Key.CAPS_LOCK,
+        'tab': Key.TAB,
+        'alt': Key.ALT,
+        'control': Key.CONTROL,
+        'meta': Key.META
     };
+
+    // Track pressed keys in main process
+    const mainPressedKeys = new Set();
 
     // Improved key press handler
     ipcMain.handle('KEY_PRESS', async (event, { key, isSpecial }) => {
         try {
-            console.log(`Key press: ${key}, isSpecial: ${isSpecial}`);
+            // Don't process if key is already pressed
+            if (mainPressedKeys.has(key)) {
+                return { success: true };
+            }
+            
+            mainPressedKeys.add(key);
             
             if (isSpecial) {
-                const mappedKey = specialKeyMap[key];
+                const mappedKey = specialKeyMap[key.toLowerCase()];
                 if (mappedKey) {
                     await keyboard.pressKey(mappedKey);
-                    console.log(`Pressed special key: ${key} -> ${mappedKey}`);
                 } else {
                     console.warn(`No mapping found for special key: ${key}`);
                 }
             } else {
                 // For regular characters (letters and numbers)
-                if (key.length === 1 || /^[0-9]$/.test(key)) {
-                    console.log(`Typing character: "${key}"`);
+                if (key.length === 1) {
                     try {
-                        // Try to get the key from the Key enum first
-                        const keyObj = Key[key.toUpperCase()];
-                        if (keyObj) {
-                            await keyboard.pressKey(keyObj);
-                            await keyboard.releaseKey(keyObj);
-                        } else {
-                            // If not found in Key enum, use type
+                        // For alphabet characters, use type directly
+                        if (/^[a-zA-Z]$/.test(key)) {
                             await keyboard.type(key);
+                        } else {
+                            // For other characters, try the Key enum
+                            const keyObj = Key[key.toUpperCase()];
+                            if (keyObj) {
+                                await keyboard.pressKey(keyObj);
+                            } else {
+                                await keyboard.type(key);
+                            }
                         }
                     } catch (error) {
                         console.error(`Error handling key "${key}":`, error);
@@ -213,13 +225,25 @@ function createWindow() {
     // Key release handler
     ipcMain.handle('KEY_RELEASE', async (event, { key, isSpecial }) => {
         try {
-            console.log(`Key release: ${key}, isSpecial: ${isSpecial}`);
+            // Don't process if key wasn't pressed
+            if (!mainPressedKeys.has(key)) {
+                return { success: true };
+            }
+            
+            mainPressedKeys.delete(key);
             
             if (isSpecial) {
-                const mappedKey = specialKeyMap[key];
+                const mappedKey = specialKeyMap[key.toLowerCase()];
                 if (mappedKey) {
                     await keyboard.releaseKey(mappedKey);
-                    console.log(`Released special key: ${key} -> ${mappedKey}`);
+                }
+            } else {
+                // For regular characters
+                if (key.length === 1) {
+                    const keyObj = Key[key.toUpperCase()];
+                    if (keyObj) {
+                        await keyboard.releaseKey(keyObj);
+                    }
                 }
             }
             
@@ -228,6 +252,20 @@ function createWindow() {
             console.error('Key release error:', error);
             return { success: false, error: error.message }; 
         }
+    });
+
+    // Clean up on window close
+    mainWindow.on('closed', () => {
+        // Release all pressed keys when window closes
+        const keysToRelease = Array.from(mainPressedKeys);
+        keysToRelease.forEach(key => {
+            const isSpecial = Object.keys(specialKeyMap).includes(key.toLowerCase());
+            const mappedKey = isSpecial ? specialKeyMap[key.toLowerCase()] : Key[key.toUpperCase()];
+            if (mappedKey) {
+                keyboard.releaseKey(mappedKey).catch(console.error);
+            }
+        });
+        mainPressedKeys.clear();
     });
 
     // Clipboard operations
